@@ -20,6 +20,8 @@ You fly a ship along the bottom of the screen and dodge a falling enemy. Every d
 
 Controls: joystick in port 2. In VICE, open Settings > Input > Joystick, set port 2 to a keyset (for example arrow keys and space) or a gamepad. A keyset is only a joystick once it is assigned to port 2: if the port is set to "None", the keys go to the C64 keyboard instead and the ship will not move properly.
 
+F5 starts VICE with its remote debug monitor attached, and every time the debugger talks to VICE the emulator is stopped for a moment. Key presses and releases that arrive then can be lost, which showed up as a stuck joystick direction (for example the raw bits stuck on `10101` or `10001`). For playing, use `make run` in a terminal, or the VS Code task "run in VICE (no debugger)" (Terminal > Run Test Task), and keep F5 for debugging.
+
 To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu Flash, Ultimate 64 or similar.
 
 ## Project layout

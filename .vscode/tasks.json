@@ -9,6 +9,21 @@
                 "isDefault": true
             },
             "label": "build project"
+        },
+        {
+            "label": "run in VICE (no debugger)",
+            "type": "shell",
+            "command": "make run",
+            "options": {
+                "env": {
+                    "PATH": "/opt/homebrew/bin:${env:PATH}"
+                }
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
         }
     ]
 }
