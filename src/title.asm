@@ -17,7 +17,7 @@ title_screen                        ; subroutine: show the title until a key or 
         lda #0                      ; no: a single stray frame must not start the game ...
         sta key_count               ; ... so start counting key frames again
         lda clean_count             ; have we seen enough clean frames already?
-        cmp #RELEASE_FRAMES         ; (this is what ignores the RUN key from autostart, the last game's fire and stray VICE bits)
+        cmp #RELEASE_FRAMES         ; (this is what ignores the RUN key from autostart, the last game's fire and stray emulator bits)
         bcs .frame                  ; yes, nothing more to count
         inc clean_count             ; one more clean frame
         jmp .frame                  ; show the next frame

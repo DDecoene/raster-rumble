@@ -6,41 +6,30 @@ A title screen waits for a key (or the joystick) before the game starts. You fly
 
 ## Tools
 
-    brew install acme vice
+    brew install acme
 
 - **ACME** is the assembler (no Java needed).
-- **VICE** (`x64sc`) is the emulator.
-- Editor: VS Code with the VS64 extension (`code --install-extension rosc.vs64`). It builds with ACME and debugs in VICE: press F5. VS64 only supports ACME and Kick Assembler, which is why this project uses ACME.
+- **vc64web** is the emulator. It runs in the browser and `make test` fetches it for you (see Testing in the browser).
+- Editor: VS Code with the VS64 extension (`code --install-extension rosc.vs64`). It builds with ACME: press Ctrl-Shift-B. VS64 only supports ACME and Kick Assembler, which is why this project uses ACME.
 
 ## Build and run
 
     make        # assembles build/raster-rumble.prg
-    make run    # launches it in VICE (x64sc)
+    make test   # builds, then runs it in the browser emulator (see below)
     make clean
 
-Controls: joystick in port 2. In VICE, open Settings > Input > Joystick, set port 2 to a keyset (for example arrow keys and space) or a gamepad. A keyset is only a joystick once it is assigned to port 2: if the port is set to "None", the keys go to the C64 keyboard instead and the ship will not move properly.
-
-F5 starts VICE with its remote debug monitor attached, and every time the debugger talks to VICE the emulator is stopped for a moment. Key presses and releases that arrive then can be lost, which showed up as a stuck joystick direction (for example the raw bits stuck on `10101` or `10001`). For playing, use `make run` in a terminal, or the VS Code task "run in VICE (no debugger)" (Terminal > Run Test Task), and keep F5 for debugging.
+Controls: joystick in port 2. In the browser emulator the arrow keys and Space work as the joystick.
 
 ### Testing in the browser
 
-VICE sometimes invents input (see the Title screen section), so there is a second way to run the game, in the vc64web browser emulator:
+The game runs in the vc64web browser emulator:
 
     make test      # builds, starts a local server and opens the game in your browser
     make serve     # only the server, on http://127.0.0.1:8000 (Ctrl-C stops it)
 
-The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and the page loads the game from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also patches two things in the emulator as it serves them: the loader that rewrites `http://` links to `https://`, and the offline cache that would keep serving an old build. The keyboard works as a joystick in that emulator too. Safari and Chrome both work.
+The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and the page loads the game from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also patches two things in the emulator as it serves them: the loader that rewrites `http://` links to `https://`, and the offline cache that would keep serving an old build.
 
-### If a joystick direction sticks in VICE
-
-Keys sometimes stay "pressed" or seem to be ignored when VICE is played with the keyboard as a joystick. The game reads exactly what VICE gives it, so this is an emulator input problem. What helped, most effective first:
-
-- Use the Mac's built-in speakers or wired headphones. Bluetooth audio makes VICE stall in small hiccups, because it paces the emulation to the sound card, and key presses and releases that arrive during a stall can be lost.
-- Play with `make run` or the "run in VICE (no debugger)" task, not F5.
-- Avoid holding three arrow keys at once, and release keys in the reverse order of pressing them.
-- Tap a stuck key once to clear it.
-- A USB gamepad mapped under Settings > Input > Joystick avoids the keyboard altogether.
-- VICE can also invent input out of nothing (see Title screen). A browser emulator such as vc64web, or real hardware, does not.
+### Joystick readout
 
 To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: the five digits on the top row are up, down, left, right and fire (0 = pressed).
 
@@ -60,7 +49,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
     project-config.json   VS64 project settings (toolkit: acme)
-    .vscode/              build task, launch config, VICE path
+    .vscode/              build task, test task, launch config
     Makefile              command-line build
 
 Every line of every file is commented. `main.asm` pulls the others in with `!source`, in the order they should sit in memory: code first, then data, then the sprites at `$2000`. `hardware.asm` and `config.asm` only contain names, so they use no memory. When you add a file, add a `!source` line for it in `main.asm` (paths are relative to the project folder) and check that the sprites still start at `$2000`. The Makefile rebuilds when any file in `src/` changes.
@@ -78,7 +67,7 @@ Every line of every file is commented. `main.asm` pulls the others in with `!sou
 
 `title_screen` (in `src/title.asm`) runs once at startup, before the first enemy appears. It hides the sprites, then loops once per frame: scroll the stars, play the tune, redraw the three text lines (a star passing over a letter would otherwise leave a hole), and call `any_key`. The title letters cycle through 8 colours and "push any key to start" flashes. `any_key` reports carry set when joystick port 2 has a pin low or any key in the keyboard matrix is down: it briefly drives all 8 keyboard columns low and reads the rows, then puts the CIA ports back as inputs for the game. A press only counts when everything has been quiet for `RELEASE_FRAMES` frames first (so the RUN key from autostart and stray input are ignored) and the key then stays down for `KEY_FRAMES` frames in a row.
 
-Note: VICE sometimes reports input that nobody pressed (for example joystick down+right, `10101`, or some keyboard rows low), and then the game starts by itself. This happened in about half of headless VICE runs with no input at all, and it is probably the cause of the sticking directions below. A browser emulator (vc64web) did not do it. The game code reads exactly what the emulator gives it.
+Note: this project used to be tested in VICE, which sometimes reported input that nobody pressed (for example joystick down+right, `10101`, or some keyboard rows low), so the game started by itself and directions seemed to stick. That is why a press only counts after a quiet period and a few frames in a row. VICE was dropped and the game is tested in the browser emulator instead.
 
 ### Memory map
 
@@ -120,7 +109,7 @@ Note: VICE sometimes reports input that nobody pressed (for example joystick dow
 
 ### Joystick and the keyboard
 
-Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left reads as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` in `src/config.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
+Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left read as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` in `src/config.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
 
 ### High score
 

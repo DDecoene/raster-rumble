@@ -2,16 +2,13 @@ NAME   = raster-rumble
 SRC    = src/main.asm
 OUT    = build/$(NAME).prg
 
-.PHONY: all run clean emu serve test
+.PHONY: all clean emu serve test
 
 all: $(OUT)
 
 $(OUT): $(wildcard src/*.asm)
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/$(NAME).lbl -r build/$(NAME).rpt -o $@ $(SRC)
-
-run: $(OUT)
-	x64sc -autostart $(OUT)
 
 # the vc64web browser emulator, fetched once into tools/vc64web (about 26 MB, not part of the repo)
 tools/vc64web:

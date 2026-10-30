@@ -11,9 +11,9 @@
             "label": "build project"
         },
         {
-            "label": "run in VICE (no debugger)",
+            "label": "test in browser",
             "type": "shell",
-            "command": "make run",
+            "command": "make test",
             "options": {
                 "env": {
                     "PATH": "/opt/homebrew/bin:${env:PATH}"
