@@ -8,7 +8,8 @@
 ;   src/score.asm      score and high score
 ;   src/starfield.asm  RAM character set, scrolling stars, random_column
 ;   src/music.asm      the tune on SID voice 2
-;   src/title.asm      the title screen and the any-key check
+;   src/title.asm      the title and game over screens and the any-key check
+;   src/demo.asm       the demo effects of those screens: raster bars, bouncing letters, scroller
 ;   src/data.asm       tables and text
 ;   src/sprites.asm    the ship and enemy shapes at $2000
 ;
@@ -287,5 +288,6 @@ life_left
         !source "src/starfield.asm" ; character set, stars and the random column helper
         !source "src/music.asm"     ; the tune
         !source "src/title.asm"     ; the title screen and the any-key check
+        !source "src/demo.asm"      ; raster bars, bouncing letters, scroller
         !source "src/data.asm"      ; tables and text
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000

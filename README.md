@@ -45,7 +45,8 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/score.asm         score and high score
     src/starfield.asm     RAM character set, scrolling stars, random_column
     src/music.asm         the tune on SID voice 2
-    src/title.asm         the title screen and the any-key check
+    src/title.asm         the title and game over screens and the any-key check
+    src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
     src/data.asm          tables and text (star data, note tables, labels)
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
@@ -113,6 +114,16 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 ### Joystick and the keyboard
 
 Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left read as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` in `src/config.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
+
+### Demo effects
+
+The title and game over screens share the code in `src/demo.asm`, only the colours and texts differ (`pal_base`, `col_base`, `txt_ptr`, `scr_ptr`).
+
+- **Raster bars.** `raster_show` waits for line `BAR_TOP`, then for every raster line up to `BAR_END` it writes one colour to the background and border (`$d021`, `$d020`). The colour comes from `barcol`, 256 bytes at `$c100` that `make_bars` fills once from the sine table and the bar palette. The sine step goes up by 4 per line, so a bar repeats every 64 lines, and `bar_phase` moves them. The writes sit right at the start of each line so the edges stay fairly straight. They are not cycle exact, so you may see small steps at the left edge. This works because the game does not use interrupts: the title polls the beam itself.
+- **Scroller.** Row 22 is redrawn every frame from the text (`scr_ptr`, ends with `$ff`). `raster_show` sets the fine scroll (`$d016` bits 0-2) on a raster line just above that row and back to 0 just below it, so only that row slides. `scr_fine` counts down by 2 pixels per frame, and every 8 pixels `scr_idx` moves one letter.
+- **Bouncing letters.** `draw_bounce` puts each of the 13 letters on one of 4 rows (6 to 9), picked from the sine table, 16 steps apart per letter and moving 3 steps per frame. The game over text is padded to 13 letters, so both screens use the same code.
+
+The frame sync is now `raster_show` itself. The rest of the frame (stars, music, text, key check) runs after the bars and must be done before line `BAR_TOP` of the next frame.
 
 ### Game over
 

@@ -15,6 +15,7 @@ SPR0_COLOR = $d027                  ; sprite 0 colour (0-15)
 SPR1_COLOR = $d028                  ; sprite 1 colour (0-15)
 VIC_RASTER = $d012                  ; the raster line the beam is currently drawing
 VIC_BORDER = $d020                  ; border colour
+VIC_CTRL2  = $d016                  ; bits 0-2: horizontal fine scroll (0-7 pixels), bit 3: 1 = 40 columns
 VIC_BG     = $d021                  ; background colour
 CIA1_PORTB = $dc01                  ; keyboard rows / joystick port 1
 CIA1_CRA   = $dc0e                  ; CIA 1 timer A control (bit 1 = show the timer on port B pin 6)

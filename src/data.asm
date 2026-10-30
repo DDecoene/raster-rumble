@@ -29,7 +29,7 @@ hi_label
 lives_label
         !scr "lives "              ; 6 characters, printed at column 18
 over_text
-        !scr "game over"            ; 9 letters, OVER_LEN
+        !scr "  game over  "        ; 13 letters like the title, so both use the same bouncing code
 restart_text
         !scr "push any key to restart" ; 23 letters, RESTART_LEN
 title_text
@@ -38,5 +38,35 @@ sub_text
         !scr "dodge the falling enemy" ; 23 letters, SUB_LEN
 prompt_text
         !scr "push any key to start" ; 21 letters, PROMPT_LEN
-title_colours
-        !byte 2, 8, 7, 5, 3, 14, 4, 10 ; red orange yellow green cyan lblue purple lred: the colours that slide along the title
+; Sine wave, 256 steps per turn, values 0 to 63: drives the raster bars and the bouncing letters
+sine
+!for i, 0, 255 {
+        !byte int(31.5 + 31.5 * sin(i * 3.14159265 / 128))
+}
+; Raster bar colours, indexed by (sine / 2): 32 steps from the bottom of the wave to the top.
+; The first part is black, so the bars are separate bands with the dark gaps between them.
+bar_pal
+        !fill 20, 0                 ; blue bars (index 0): black
+        !byte 6, 6, 6, 6, 6, 6, 6, 14, 14, 14, 3, 3     ; mostly blue, light blue and cyan only at the top: the letters stay readable
+        !fill 20, 0                 ; fire bars (index 32): black
+        !byte 2, 2, 2, 2, 2, 2, 2, 8, 8, 8, 10, 10     ; mostly red, orange and light red at the top
+letter_cols                         ; the 8 colours that slide along the letters, 8 per screen
+        !byte 2, 8, 7, 5, 3, 14, 4, 10 ; title: red orange yellow green cyan lblue purple lred
+        !byte 1, 7, 8, 2, 8, 7, 1, 15 ; game over: white yellow orange red ...
+bounce_lo                           ; screen address of row BOUNCE_ROW + k, column TITLE_COL (k = 0 to 3)
+!for k, 0, 3 {
+        !byte <(SCREEN + (BOUNCE_ROW + k) * 40 + TITLE_COL)
+}
+bounce_hi
+!for k, 0, 3 {
+        !byte >(SCREEN + (BOUNCE_ROW + k) * 40 + TITLE_COL)
+}
+title_scroll
+        !scr "      welcome to raster rumble ... fly your ship with the joystick in port 2 and dodge the falling enemy ... "
+        !scr "it follows you and gets faster every ten dodges ... you have five lives ... "
+        !scr "greetings to everyone who ever typed sys 2064 ...      "
+        !byte $ff                   ; end marker, the scroller starts again
+over_scroll
+        !scr "      you ran out of lives ... the high score stays on the screen, so beat it ... "
+        !scr "press any key to dive back in ...      "
+        !byte $ff                   ; end marker

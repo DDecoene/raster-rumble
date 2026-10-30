@@ -1,26 +1,54 @@
-; title.asm - the title screen: the name, a flashing "push any key to start", and the stars and music keep going
+; title.asm - the title and game over screens: bouncing letters, raster bars and a scroller (see demo.asm), a flashing prompt,
+; and the stars and music keep going
 
 !zone title_screen
 title_screen                        ; subroutine: show the title until a key or the joystick is pressed
         lda #0                      ; A = 0
         sta title_mode              ; the title, not the game over screen
         sta clean_count             ; frame counter for the waiting time at the start, keys are ignored until it is over
-        beq .start                  ; (always taken) share the rest with game_over
+        sta pal_base                ; blue raster bars
+        sta col_base                ; title letter colours
+        lda #<title_text            ; the bouncing letters ...
+        sta txt_ptr
+        lda #>title_text
+        sta txt_ptr + 1
+        lda #<title_scroll          ; ... and the scroller text
+        sta scr_ptr
+        lda #>title_scroll
+        sta scr_ptr + 1
+        bne .start                  ; (always taken, the high byte is not 0) share the rest with game_over
 game_over                           ; subroutine: show "game over" until a key or the joystick is pressed
         lda #1                      ; the game over screen
         sta title_mode              ; draw_title picks other text
+        lda #32                     ; fire raster bars
+        sta pal_base
+        lda #8                      ; game over letter colours
+        sta col_base
+        lda #<over_text
+        sta txt_ptr
+        lda #>over_text
+        sta txt_ptr + 1
+        lda #<over_scroll
+        sta scr_ptr
+        lda #>over_scroll
+        sta scr_ptr + 1
         lda #RELEASE_FRAMES - OVER_WAIT ; a short wait only, the player was just playing
         sta clean_count             ; (a key held from the game must still be released first)
 .start
         lda #0                      ; A = 0
         sta SPR_ENABLE              ; hide the ship and the enemy while the text shows
         sta key_count               ; no frames with a key down yet
+        sta scr_idx                 ; the scroller starts at the first letter
+        jsr make_bars               ; the bar colours of this screen
+        lda #7
+        sta scr_fine                ; ... with the fine scroll at 7
 .frame
-        jsr wait_frame              ; wait for the next frame
+        jsr raster_show             ; the colour bars and the scroller split: this also waits for the next frame
         inc frame_count             ; one more frame has passed (the stars and the colours use it)
         jsr update_stars            ; the stars keep scrolling behind the title
         jsr update_music            ; and the tune keeps playing
         jsr draw_title              ; draw the text on top of any star that crossed it
+        jsr scroll_step             ; move the scroller 2 pixels
         lda clean_count             ; the first RELEASE_FRAMES frames only count time, whatever is pressed: ...
         cmp #RELEASE_FRAMES         ; ... emulators type their own RUN keys and send stray input just after loading
         bcc .arming                 ; still waiting
@@ -46,9 +74,13 @@ game_over                           ; subroutine: show "game over" until a key o
         lda #$20                    ; yes: A = space
         ldx #39                     ; the 40 cells of a row, counting down
 .erase
-        sta TITLE_POS - TITLE_COL,x ; clear the title row
+        sta SCREEN + BOUNCE_ROW * 40,x     ; clear the rows of the bouncing letters (6 to 9) ...
+        sta SCREEN + (BOUNCE_ROW + 1) * 40,x
+        sta SCREEN + (BOUNCE_ROW + 2) * 40,x
+        sta SCREEN + (BOUNCE_ROW + 3) * 40,x
         sta SUB_POS - SUB_COL,x     ; clear the tagline row
         sta PROMPT_POS - PROMPT_COL,x ; clear the prompt row
+        sta SCROLL_POS,x            ; clear the scroller row
         dex                         ; previous cell
         bpl .erase                  ; until X goes below 0
         lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 on
@@ -56,28 +88,12 @@ game_over                           ; subroutine: show "game over" until a key o
         rts                         ; back to the start of the game
 
 !zone draw_title
-draw_title                          ; subroutine: write the three text lines and their colours, once per frame
+draw_title                          ; subroutine: draw the bouncing letters, then the other text lines, once per frame
+        jsr draw_bounce             ; the 13 letters on their sine wave
         lda title_mode              ; which screen?
         beq .titlemode              ; 0 = the title
         jmp draw_over               ; game over (draw_over returns to our caller)
 .titlemode
-        lda frame_count             ; the title colours slide along: every 4 frames they move one letter
-        lsr                         ; shift right twice, so the value changes every 4th frame
-        lsr                         ; (lsr alone on A shifts the accumulator)
-        sta xlo                     ; keep it as the colour offset (xlo is scratch, free during the title)
-        ldx #TITLE_LEN - 1          ; letter number, counting down
-.title
-        lda title_text,x            ; one letter of the title
-        sta TITLE_POS,x             ; put it on the screen
-        txa                         ; letter number ...
-        clc                         ; clear carry before adding
-        adc xlo                     ; ... plus the offset ...
-        and #%00000111              ; ... wrapped to 0-7 picks an entry in the colour table
-        tay                         ; Y = index
-        lda title_colours,y         ; the colour for this letter
-        sta COLOR_RAM + TITLE_POS - SCREEN,x ; colour RAM sits at the same offset as the screen byte
-        dex                         ; previous letter
-        bpl .title                  ; until X goes below 0
         ldx #SUB_LEN - 1            ; tagline letter, counting down
 .sub
         lda sub_text,x              ; one letter of the tagline
@@ -106,15 +122,7 @@ draw_title                          ; subroutine: write the three text lines and
         rts                         ; return to the caller
 
 !zone draw_over
-draw_over                           ; subroutine: "game over" in red and the flashing restart prompt
-        ldx #OVER_LEN - 1           ; letter number, counting down
-.over
-        lda over_text,x             ; one letter
-        sta OVER_POS,x              ; put it on the screen
-        lda #COLOR_RED              ; red
-        sta COLOR_RAM + OVER_POS - SCREEN,x ; colour it
-        dex                         ; previous letter
-        bpl .over                   ; until X goes below 0
+draw_over                           ; subroutine: the flashing restart prompt of the game over screen
         lda frame_count             ; the prompt flashes like on the title
         and #%00010000              ; bit 4 flips every 16 frames
         beq .on                     ; 0 = white phase
@@ -161,15 +169,6 @@ any_key                             ; subroutine: carry set = a key or a joystic
         rts                         ; return to the caller
 .yes
         sec                         ; carry set = pressed
-        rts                         ; return to the caller
-
-!zone wait_frame
-wait_frame                          ; subroutine: return once per screen refresh, the same wait the game loop uses
-        lda #$fb                    ; the raster line we wait for
--       cmp VIC_RASTER              ; is the beam on that line yet?
-        bne -                       ; no, keep checking
--       cmp VIC_RASTER              ; yes, now wait until the beam has left that line
-        beq -                       ; still on it, keep waiting
         rts                         ; return to the caller
 
 !zone cia_inputs
