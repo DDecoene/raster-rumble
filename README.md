@@ -24,7 +24,7 @@ Controls: joystick in port 2. In the browser emulator (`make test`) the arrow ke
 
 The game runs in the vc64web browser emulator:
 
-    make test      # builds, starts a local server and opens the game in your browser
+    make test      # builds, (re)starts a local server and opens the game in your browser
     make serve     # only the server, on http://127.0.0.1:8000 (Ctrl-C stops it)
     make stop      # stops the server that make test leaves running in the background
 

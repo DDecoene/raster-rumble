@@ -20,9 +20,10 @@ emu: tools/vc64web
 serve: $(OUT) tools/vc64web
 	python3 tools/serve.py 8000
 
-# build, start the server if it is not running yet, open the game in the browser emulator
+# build, (re)start the server so it always runs the current tools/serve.py, open the game in the browser emulator
 test: $(OUT) tools/vc64web
-	@curl -s -o /dev/null http://127.0.0.1:8000/ || (python3 tools/serve.py 8000 > /dev/null 2>&1 &)
+	@pkill -f tools/serve.py || true
+	@(python3 tools/serve.py 8000 > /dev/null 2>&1 &)
 	@sleep 1
 	open "http://127.0.0.1:8000/#openROMS=true"
 
