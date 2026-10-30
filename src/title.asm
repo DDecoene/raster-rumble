@@ -3,9 +3,18 @@
 !zone title_screen
 title_screen                        ; subroutine: show the title until a key or the joystick is pressed
         lda #0                      ; A = 0
-        sta SPR_ENABLE              ; hide the ship and the enemy while the title shows
-        sta key_count               ; no frames with a key down yet
+        sta title_mode              ; the title, not the game over screen
         sta clean_count             ; frame counter for the waiting time at the start, keys are ignored until it is over
+        beq .start                  ; (always taken) share the rest with game_over
+game_over                           ; subroutine: show "game over" until a key or the joystick is pressed
+        lda #1                      ; the game over screen
+        sta title_mode              ; draw_title picks other text
+        lda #RELEASE_FRAMES - OVER_WAIT ; a short wait only, the player was just playing
+        sta clean_count             ; (a key held from the game must still be released first)
+.start
+        lda #0                      ; A = 0
+        sta SPR_ENABLE              ; hide the ship and the enemy while the text shows
+        sta key_count               ; no frames with a key down yet
 .frame
         jsr wait_frame              ; wait for the next frame
         inc frame_count             ; one more frame has passed (the stars and the colours use it)
@@ -48,6 +57,10 @@ title_screen                        ; subroutine: show the title until a key or 
 
 !zone draw_title
 draw_title                          ; subroutine: write the three text lines and their colours, once per frame
+        lda title_mode              ; which screen?
+        beq .titlemode              ; 0 = the title
+        jmp draw_over               ; game over (draw_over returns to our caller)
+.titlemode
         lda frame_count             ; the title colours slide along: every 4 frames they move one letter
         lsr                         ; shift right twice, so the value changes every 4th frame
         lsr                         ; (lsr alone on A shifts the accumulator)
@@ -90,6 +103,35 @@ draw_title                          ; subroutine: write the three text lines and
         sta COLOR_RAM + PROMPT_POS - SCREEN,x ; colour it
         dex                         ; previous letter
         bpl .prompt                 ; until X goes below 0
+        rts                         ; return to the caller
+
+!zone draw_over
+draw_over                           ; subroutine: "game over" in red and the flashing restart prompt
+        ldx #OVER_LEN - 1           ; letter number, counting down
+.over
+        lda over_text,x             ; one letter
+        sta OVER_POS,x              ; put it on the screen
+        lda #COLOR_RED              ; red
+        sta COLOR_RAM + OVER_POS - SCREEN,x ; colour it
+        dex                         ; previous letter
+        bpl .over                   ; until X goes below 0
+        lda frame_count             ; the prompt flashes like on the title
+        and #%00010000              ; bit 4 flips every 16 frames
+        beq .on                     ; 0 = white phase
+        lda #COLOR_DGREY            ; 1 = dim phase
+        bne .setcol                 ; (always taken)
+.on
+        lda #COLOR_WHITE            ; bright phase
+.setcol
+        sta xlo                     ; remember the colour while X is busy
+        ldx #RESTART_LEN - 1        ; letter number, counting down
+.restart
+        lda restart_text,x          ; one letter
+        sta RESTART_POS,x           ; put it on the screen
+        lda xlo                     ; the flash colour
+        sta COLOR_RAM + RESTART_POS - SCREEN,x ; colour it
+        dex                         ; previous letter
+        bpl .restart                ; until X goes below 0
         rts                         ; return to the caller
 
 !zone any_key

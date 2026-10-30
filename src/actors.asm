@@ -140,3 +140,12 @@ reset_difficulty                    ; subroutine: back to the slow start speed
         lda #0                      ; A = 0
         sta dodge_count             ; no dodges counted yet
         rts                         ; return to the caller
+
+reset_ship                          ; subroutine: ship back to the start position
+        lda #160                    ; start X: roughly the middle
+        sta SPR0_X                  ; set ship X
+        lda #$00                    ; bit 8 of every sprite X = 0
+        sta SPR_XHI                 ; (the enemy is placed again by spawn_enemy)
+        lda #200                    ; start Y: near the bottom
+        sta SPR0_Y                  ; set ship Y
+        rts                         ; return to the caller

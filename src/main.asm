@@ -140,8 +140,20 @@ start
         dex                         ; previous cell
         bpl -                       ; until X goes below 0
 
+        ldx #5                      ; 6 characters: "lives ", counting down
+-       lda lives_label,x           ; one character of "lives "
+        sta SCREEN + 18,x           ; put it on the top row, column 18
+        dex                         ; previous character
+        bpl -                       ; until X goes below 0
+        lda #COLOR_WHITE            ; A = white
+        ldx #6                      ; 7 cells: "lives " plus the digit, counting down
+-       sta COLOR_RAM + 18,x        ; make this character white
+        dex                         ; previous cell
+        bpl -                       ; until X goes below 0
+
         jsr init_hiscore            ; keep the old high score if RAM has one, else 000, and draw it
         jsr reset_score             ; score = 000 and draw it
+        jsr reset_lives             ; full lives and draw them
         jsr reset_difficulty        ; enemy starts at its slowest speed
         jsr title_screen            ; wait on the title until a key is pressed (it also switches the sprites on)
         jsr spawn_enemy             ; put the enemy at the top at a random X
@@ -244,9 +256,21 @@ frame                               ; the game loop, runs once per screen refres
         sta SID_CTRL1               ; voice 1 stops
         lda #%10000001              ; noise waveform, gate on
         sta SID_CTRL1               ; gate 0 to 1 starts the explosion sound
-        jsr reset_score             ; a hit costs you the score
+        dec lives                   ; a hit costs a life (the score and the speed stay)
+        jsr draw_lives              ; show it
+        lda lives                   ; any left?
+        bne life_left               ; yes, carry on
+        lda #$00                    ; no, game over: black
+        sta VIC_BORDER              ; stop the flash
+        sta hit_timer               ; ... for good
+        jsr game_over               ; show it until a key is pressed (the high score stays)
+        jsr reset_score             ; new game: score = 000
+        jsr reset_lives             ; ... full lives
         jsr reset_difficulty        ; ... and the enemy is slow again
+        jsr reset_ship              ; ... and the ship in its start position
+life_left
         jsr spawn_enemy             ; send the enemy back to the top
+        lda SPR_COLL                ; clear the collision register
 +
         lda hit_timer               ; is the border flashing?
         beq +                       ; no, nothing to do

@@ -26,6 +26,12 @@ score_label
 hi_label
         !scr "hi "                  ; 3 characters, printed at column 31
 
+lives_label
+        !scr "lives "              ; 6 characters, printed at column 18
+over_text
+        !scr "game over"            ; 9 letters, OVER_LEN
+restart_text
+        !scr "push any key to restart" ; 23 letters, RESTART_LEN
 title_text
         !scr "raster rumble"        ; 13 letters, TITLE_LEN
 sub_text

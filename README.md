@@ -2,7 +2,7 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
+A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
 
 ## Tools
 
@@ -94,6 +94,8 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 | `$0a` | `music_timer` | frames left until the next music note |
 | `$0b` | `music_step` | which of the 32 notes plays next |
 | `$0c` | `key_count` | title screen: frames in a row with a key down (needs `KEY_FRAMES`) |
+| `$0e` | `lives` | lives left, 0 = game over |
+| `$0f` | `title_mode` | 0 = title screen, 1 = game over screen |
 | `$0d` | `clean_count` | title screen: frames since it appeared, counts up to `RELEASE_FRAMES`, then `RELEASE_FRAMES` + 1 once a frame with no key was seen |
 | `$fb`-`$fe` | `star_ptr`, `star_cptr` | pointers to a star's screen and colour RAM cell |
 | `$fd`-`$fe` | `xlo`, `xhi` | scratch for building the enemy's 9-bit spawn X (shares the bytes of `star_cptr`, never used at the same time) |
@@ -112,6 +114,10 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 
 Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left read as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` in `src/config.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
 
+### Game over
+
+A hit does `dec lives`. When it reaches 0, `game_over` (in `src/title.asm`) runs the same wait-for-a-key loop as the title with `title_mode` = 1, so `draw_over` draws a red "game over" and a flashing "push any key to restart". It ignores keys for `OVER_WAIT` frames only (the player was just using the joystick). Then the score, lives, speed and ship position reset. The score and speed are not reset by a single hit, only by a new game. The high score is untouched.
+
 ### High score
 
 The high score is three digit bytes at `$c000`-`$c002`, with a signature byte `$a5` at `$c003`. `$c000` is free RAM outside the program and the zero page, so nothing clears it: it survives hits, a restart with `RUN` and a reload of the program. Power-off wipes it. At startup `init_hiscore` checks the signature: if it is missing the high score is set to 000 and signed, otherwise the old value is kept. `update_hiscore` runs after every dodge and copies the score over when it is higher. It is drawn at the top right (`hi 000`).
@@ -123,6 +129,7 @@ These constants in `src/config.asm` change the difficulty without touching the l
 - `ENEMY_SPEED`: starting fall speed in pixels per frame.
 - `MAX_SPEED`: the fastest the enemy gets.
 - `DODGES_PER_LEVEL`: dodges needed per speed-up.
+- `LIVES`: lives per game. `OVER_WAIT`: frames the game over screen ignores keys.
 - `HIT_FRAMES`: how long the border flashes after a hit.
 - `MUSIC_FRAMES`: frames per music note, higher is slower.
 - `STARS`: number of stars (the speed and colour tables repeat every 3).
@@ -140,6 +147,5 @@ These constants in `src/config.asm` change the difficulty without touching the l
 ## Ideas for later
 
 - Save the high score to disk now that there is a title screen.
-- A game-over state that returns to the title.
 - More enemies at once (sprites 2-7 are free).
 - A second music voice (bass or drums) and a title tune.

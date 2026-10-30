@@ -94,3 +94,13 @@ draw_hiscore                        ; subroutine: print the three high score dig
         ora #$30                    ; turn the number into a character
         sta HI_POS + 2              ; print it
         rts                         ; return to the caller
+
+!zone lives
+reset_lives                         ; subroutine: LIVES lives and draw them
+        lda #LIVES                  ; the starting number of lives
+        sta lives                   ; set it
+draw_lives                          ; subroutine: print the lives digit
+        lda lives                   ; a number 0-9
+        ora #$30                    ; turn the number into a character
+        sta LIVES_POS               ; print it
+        rts                         ; return to the caller

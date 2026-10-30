@@ -11,8 +11,10 @@ MAX_Y = 229                         ; bottom edge
 ENEMY_SPEED = 2                     ; pixels the enemy falls per frame at the start of a game
 MAX_SPEED   = 5                     ; the enemy never falls faster than this
 DODGES_PER_LEVEL = 10               ; every 10 dodged enemies the enemy gets 1 pixel per frame faster
+LIVES       = 5                    ; lives at the start of a game
 HIT_FRAMES  = 10                    ; how many frames the border stays red after a hit
 SCORE_POS  = SCREEN + 6             ; where the three score digits are printed (after the word "score ")
+LIVES_POS  = SCREEN + 24            ; where the lives digit is printed (after "lives " at column 18)
 HI_POS     = SCREEN + 34            ; where the three high score digits are printed (after "hi " at column 31)
 ; The high score lives at $c000, a free RAM block outside our program and the zero page.
 ; Nothing loads over it or clears it, so it survives hits, a restart with RUN and a reload.
@@ -30,6 +32,8 @@ music_timer = $0a                   ; frames left until the next music note
 music_step  = $0b                   ; which of the 32 notes plays next
 key_count   = $0c                   ; title screen: frames in a row that a key has been down
 clean_count = $0d                   ; title screen: frames since the title appeared, counts up to RELEASE_FRAMES, then RELEASE_FRAMES + 1 once a frame with no key was seen
+lives       = $0e                   ; lives left, 0 means game over
+title_mode  = $0f                   ; 0 = the title is showing, 1 = the game over screen
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
 xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr
 xhi         = $fe                   ; ... and its high byte (0 or 1)
@@ -51,5 +55,13 @@ PROMPT_COL = 9                      ;
 TITLE_POS  = SCREEN + TITLE_ROW * 40 + TITLE_COL   ; screen address of the first letter of each line
 SUB_POS    = SCREEN + SUB_ROW * 40 + SUB_COL
 PROMPT_POS = SCREEN + PROMPT_ROW * 40 + PROMPT_COL
+OVER_ROW   = 7                      ; game over screen: row of "game over", the restart prompt uses PROMPT_ROW
+OVER_LEN   = 9                      ; letters in "game over"
+OVER_COL   = 15
+OVER_POS   = SCREEN + OVER_ROW * 40 + OVER_COL
+RESTART_LEN = 23                    ; letters in "push any key to restart"
+RESTART_COL = 8
+RESTART_POS = SCREEN + PROMPT_ROW * 40 + RESTART_COL
+OVER_WAIT  = 50                     ; frames (1 second) the game over screen ignores keys, so the last joystick moves do not skip it
 KEY_FRAMES = 1                      ; frames a key must be down to start the game: a quick tap in the browser emulator lasts only one frame
 RELEASE_FRAMES = 250                ; the title ignores all keys for this many frames (5 seconds) after loading: emulators type their own RUN keys then
