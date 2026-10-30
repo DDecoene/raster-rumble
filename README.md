@@ -2,7 +2,7 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score. The best score of the session stays on screen as `hi`.
+You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
 
 ## Tools
 
@@ -18,7 +18,7 @@ You fly a ship along the bottom of the screen and dodge a falling enemy. Every d
     make run    # launches it in VICE (x64sc)
     make clean
 
-Controls: joystick in port 2. In VICE, map a keyset or gamepad under Settings > Input > Joystick.
+Controls: joystick in port 2. In VICE, open Settings > Input > Joystick, set port 2 to a keyset (for example arrow keys and space) or a gamepad. A keyset is only a joystick once it is assigned to port 2: if the port is set to "None", the keys go to the C64 keyboard instead and the ship will not move properly.
 
 To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu Flash, Ultimate 64 or similar.
 
@@ -33,10 +33,20 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 
 - The program loads at `$0801` with a BASIC stub (`10 SYS 2064`), and the code starts at `$0810`. A build-time check fails if `start` moves off 2064.
 - Sprite 0 is the ship, sprite 1 is the enemy. Both are multicolor (12 fat pixels per row, 2 bits each: transparent, own colour, plus orange and yellow shared by both sprites via `$d025`/`$d026`) and have two animation frames. Shapes: ship A `$2000` (pointer 128), enemy A `$2040` (129), ship B `$2080` (130), enemy B `$20c0` (131). The frame switches every 8 frames by bit 3 of `frame_count`. The shapes are drawn as ASCII art in the comments next to each row (`.` transparent, `a` orange, `b` own colour, `c` yellow).
-- The main loop waits for raster line `$fb` once per frame, then reads the joystick, moves the enemy, checks the hardware sprite collision register (`$d01e`) and updates the score.
+- The main loop waits for raster line `$fb` once per frame, then picks the animation frame, scrolls the stars, plays the next music note if it is time, reads the joystick, moves the enemy, checks the hardware sprite collision register (`$d01e`) and updates the score. All of that takes about 7% of a PAL frame.
 - Random enemy positions come from SID voice 3 set to noise (`$d41b`). It is muted so it stays silent.
-- The explosion is a noise burst on SID voice 1, retriggered by switching its gate off and on.
 - The score is three separate digit bytes (hundreds, tens, ones) in zero page `$04`-`$06`, printed by adding `$30` to each digit.
+
+### Memory map
+
+| Address | Use |
+|---------|-----|
+| `$0400`-`$07e7` | screen memory (`$07f8`/`$07f9` hold the sprite pointers) |
+| `$0801` | BASIC stub, `10 SYS 2064` |
+| `$0810` | the code, data tables and music (ends around `$0c71`) |
+| `$2000`-`$20ff` | the four sprite shapes (blocks 128-131) |
+| `$2800`-`$2fff` | RAM character set: ROM letters and digits plus the star shapes |
+| `$c000`-`$c003` | high score and its signature byte |
 
 ### Zero page
 
@@ -58,7 +68,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 
 ### Sound
 
-- Voice 1: sound effects, a short triangle blip for each dodge and the noise explosion on a hit.
+- Voice 1: sound effects, a short triangle blip for each dodge and a noise explosion on a hit. Each one sets its own pitch and envelope, then retriggers the voice by switching the gate off and on.
 - Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked square wave. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
 - Voice 3: the muted random number generator.
 
@@ -87,6 +97,8 @@ These constants at the top of `src/main.asm` change the difficulty without touch
 - `.local` labels belong to a `!zone`, not to the nearest normal label. Give each subroutine its own `!zone` if they share a local label name such as `.done`.
 - `+` and `-` are anonymous labels: a branch to `+` goes to the next `+` below, a branch to `-` to the previous `-` above.
 - `!scr "text"` converts to C64 screen codes. Lowercase in the source shows as capitals on screen in the default character set.
+- `!for k, 0, 7 { ... }` repeats a block at assembly time, which is how the 8 star shapes are written.
+- VS64 passes `-DDEBUG=1` to ACME for its debug build, so never name your own symbol `DEBUG`: the build fails with "Symbol already defined". Test that build with `acme -DDEBUG=1 -f cbm --cpu 6510 -o /dev/null src/main.asm`.
 
 ## Ideas for later
 
