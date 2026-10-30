@@ -1,4 +1,4 @@
-; raster-rumble - step 3: move the ship with the joystick (port 2), dodge a falling enemy
+; raster-rumble - step 4: move the ship with the joystick (port 2), dodge a falling enemy, keep score
 ; Assembler: ACME
 ;
 ; 6502 refresher:
@@ -54,12 +54,23 @@ MAX_X = 250                         ; right edge (we only use the low 8 bits of 
 MIN_Y = 50                          ; top edge of the screen area
 MAX_Y = 229                         ; bottom edge
 
-ENEMY_SPEED = 2                     ; pixels the enemy falls per frame
+ENEMY_SPEED = 2                     ; pixels the enemy falls per frame at the start of a game
+MAX_SPEED   = 5                     ; the enemy never falls faster than this
+DODGES_PER_LEVEL = 10               ; every 10 dodged enemies the enemy gets 1 pixel per frame faster
 HIT_FRAMES  = 10                    ; how many frames the border stays red after a hit
 COLOR_RED   = 2                     ; C64 colour number for red
 
+SCREEN     = $0400                  ; screen memory, 40x25 characters, one byte per character
+COLOR_RAM  = $d800                  ; colour memory, one byte per character, same layout as the screen
+SCORE_POS  = SCREEN + 6             ; where the three score digits are printed (after the word "score ")
+COLOR_WHITE = 1                     ; C64 colour number for white
+
 joy       = $02                     ; a spare zero-page byte where we keep a copy of the joystick
 hit_timer = $03                     ; frames left to show the red border (0 = not flashing)
+score     = $04                     ; three bytes, $04 $05 $06: hundreds, tens, ones (each 0-9)
+enemy_speed = $07                   ; pixels the enemy falls per frame right now (ENEMY_SPEED up to MAX_SPEED)
+dodge_count = $08                   ; dodged enemies since the last speed-up (0 to DODGES_PER_LEVEL - 1)
+frame_count = $09                   ; counts frames, its lowest bit flips every frame (used to slow the homing)
 
         * = $0810                   ; our code lives here (decimal 2064, matches the SYS above)
 
@@ -104,6 +115,31 @@ start
 
         lda #0                      ; A = 0
         sta hit_timer               ; border is not flashing yet
+
+        lda #$20                    ; screen code $20 = space
+        ldx #0                      ; X counts 0 to 255, then wraps back to 0
+-       sta SCREEN,x                ; clear page 1 of screen memory
+        sta SCREEN + $100,x         ; clear page 2
+        sta SCREEN + $200,x         ; clear page 3
+        sta SCREEN + $2e8,x         ; clear the last 256 bytes of the 1000 (stops before the sprite pointers at $07f8)
+        inx                         ; next byte
+        bne -                       ; until X wrapped around to 0
+
+        ldx #0                      ; X = 0, index into the label text
+-       lda score_label,x           ; one character of "score "
+        sta SCREEN,x                ; put it on the top row
+        inx                         ; next character
+        cpx #6                      ; did we print all 6?
+        bne -                       ; no, continue
+
+        lda #COLOR_WHITE            ; A = white
+        ldx #8                      ; 9 cells: "score " (6) plus 3 digits, counting down from 8
+-       sta COLOR_RAM,x             ; make this character white
+        dex                         ; previous cell
+        bpl -                       ; until X goes below 0 (bit 7 set)
+
+        jsr reset_score             ; score = 000 and draw it
+        jsr reset_difficulty        ; enemy starts at its slowest speed
         jsr spawn_enemy             ; put the enemy at the top at a random X
         lda SPR_COLL                ; read the collision register once to clear leftovers
 
@@ -113,6 +149,8 @@ frame                               ; the game loop, runs once per screen refres
         bne -                       ; no, keep checking
 -       cmp VIC_RASTER              ; yes, now wait until the beam has left that line
         beq -                       ; still on it, keep waiting (so we only run once per frame)
+
+        inc frame_count             ; one more frame has passed
 
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
         sta joy                     ; keep a copy, because we shift it bit by bit
@@ -142,13 +180,27 @@ frame                               ; the game loop, runs once per screen refres
         beq +                       ; yes, don't move
         inc SPR0_X                  ; X + 1 moves the sprite right
 +
+        lda frame_count             ; homing: only on every other frame, so the enemy is slower than the ship
+        and #%00000001              ; keep only the lowest bit, it is 1 on every other frame
+        beq +                       ; 0 = skip homing this frame
+        lda SPR1_X                  ; enemy X
+        cmp SPR0_X                  ; compare with the ship X (carry set if enemy X >= ship X)
+        beq +                       ; same X, nothing to do
+        bcs .home_left              ; the enemy is right of the ship, so move it left
+        inc SPR1_X                  ; the enemy is left of the ship, so move it right
+        jmp +                       ; done with homing
+.home_left
+        dec SPR1_X                  ; X - 1 moves the enemy left
++
         lda SPR1_Y                  ; current enemy Y
         clc                         ; clear carry before adding
-        adc #ENEMY_SPEED            ; fall a few pixels
+        adc enemy_speed             ; fall as fast as the current level allows
         sta SPR1_Y                  ; store the new enemy Y
         cmp #MAX_Y                  ; has it reached the bottom?
         bcc +                       ; no (A < MAX_Y), carry on
-        jsr spawn_enemy             ; yes, respawn it at the top
+        jsr add_score               ; the enemy got past us: +1 point
+        jsr count_dodge             ; every 10 dodges the enemy speeds up
+        jsr spawn_enemy             ; respawn it at the top
 +
         lda SPR_COLL                ; which sprites touched? (reading also clears the register)
         and #%00000011              ; keep only the bits of the ship and the enemy
@@ -162,6 +214,8 @@ frame                               ; the game loop, runs once per screen refres
         sta SID_CTRL1               ; voice 1 stops
         lda #%10000001              ; noise waveform, gate on
         sta SID_CTRL1               ; gate 0 to 1 starts the explosion sound
+        jsr reset_score             ; a hit costs you the score
+        jsr reset_difficulty        ; ... and the enemy is slow again
         jsr spawn_enemy             ; send the enemy back to the top
 +
         lda hit_timer               ; is the border flashing?
@@ -183,6 +237,75 @@ spawn_enemy                         ; subroutine: enemy to the top, random X in 
         bcs -                       ; yes, pick another
         sta SPR1_X                  ; set enemy X
         rts                         ; return to the caller
+
+!zone count_dodge                   ; ACME: '.labels' are local to a zone, so each subroutine gets its own
+count_dodge                         ; subroutine: after every 10th dodge the enemy gets faster
+        inc dodge_count             ; one more dodge
+        lda dodge_count             ; load it to compare
+        cmp #DODGES_PER_LEVEL       ; reached 10?
+        bcc .done                   ; no, finished
+        lda #0                      ; yes: start counting again ...
+        sta dodge_count             ; ... from 0
+        lda enemy_speed             ; current speed
+        cmp #MAX_SPEED              ; already at the maximum?
+        bcs .done                   ; yes, leave it
+        inc enemy_speed             ; no, one pixel per frame faster
+.done
+        rts                         ; return to the caller
+
+reset_difficulty                    ; subroutine: back to the slow start speed
+        lda #ENEMY_SPEED            ; the starting speed
+        sta enemy_speed             ; set it
+        lda #0                      ; A = 0
+        sta dodge_count             ; no dodges counted yet
+        rts                         ; return to the caller
+
+!zone add_score                     ; a new zone, so this '.done' is a different label than the one above
+add_score                           ; subroutine: score + 1, three decimal digits, stops at 999
+        inc score + 2               ; ones + 1
+        lda score + 2               ; load it to compare
+        cmp #10                     ; still 0-9?
+        bcc .done                   ; yes, finished
+        lda #0                      ; ones overflowed: back to 0 ...
+        sta score + 2               ; ... store it
+        inc score + 1               ; ... and tens + 1
+        lda score + 1               ; load it to compare
+        cmp #10                     ; still 0-9?
+        bcc .done                   ; yes, finished
+        lda #0                      ; tens overflowed: back to 0 ...
+        sta score + 1               ; ... store it
+        inc score                   ; ... and hundreds + 1
+        lda score                   ; load it to compare
+        cmp #10                     ; still 0-9?
+        bcc .done                   ; yes, finished
+        lda #9                      ; we reached 1000: stay at 999
+        sta score                   ; hundreds = 9
+        sta score + 1               ; tens = 9
+        sta score + 2               ; ones = 9
+.done
+        jmp draw_score              ; show the new score (draw_score returns to our caller)
+
+reset_score                         ; subroutine: score = 000
+        lda #0                      ; A = 0
+        sta score                   ; hundreds = 0
+        sta score + 1               ; tens = 0
+        sta score + 2               ; ones = 0
+        jmp draw_score              ; show it (draw_score returns to our caller)
+
+draw_score                          ; subroutine: print the three digits on the screen
+        lda score                   ; hundreds digit, a number 0-9
+        ora #$30                    ; screen code for '0' is $30, so $30 + digit is the character
+        sta SCORE_POS               ; print it
+        lda score + 1               ; tens digit
+        ora #$30                    ; turn the number into a character
+        sta SCORE_POS + 1           ; print it
+        lda score + 2               ; ones digit
+        ora #$30                    ; turn the number into a character
+        sta SCORE_POS + 2           ; print it
+        rts                         ; return to the caller
+
+score_label
+        !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
 
         * = $2000                   ; the sprite shape goes at $2000 (= 128 * 64)
 
