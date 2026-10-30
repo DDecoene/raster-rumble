@@ -26,10 +26,20 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 
 ## Project layout
 
-    src/main.asm          the whole game, every line commented
+    src/main.asm          startup code and the main loop, includes everything else
+    src/hardware.asm      names for the VIC, SID and CIA registers, colours, fixed memory areas
+    src/config.asm        difficulty settings, screen layout, zero page and RAM variable addresses
+    src/actors.asm        ship and enemy: 9-bit X movement, spawning, homing, difficulty
+    src/score.asm         score and high score
+    src/starfield.asm     RAM character set, scrolling stars, random_column
+    src/music.asm         the tune on SID voice 2
+    src/data.asm          tables and text (star data, note tables, labels)
+    src/sprites.asm       the ship and enemy shapes at $2000
     project-config.json   VS64 project settings (toolkit: acme)
     .vscode/              build task, launch config, VICE path
     Makefile              command-line build
+
+Every line of every file is commented. `main.asm` pulls the others in with `!source`, in the order they should sit in memory: code first, then data, then the sprites at `$2000`. `hardware.asm` and `config.asm` only contain names, so they use no memory. When you add a file, add a `!source` line for it in `main.asm` (paths are relative to the project folder) and check that the sprites still start at `$2000`. The Makefile rebuilds when any file in `src/` changes.
 
 ## How it works
 
@@ -78,7 +88,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 
 ### Joystick and the keyboard
 
-Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left reads as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` at the top of `src/main.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
+Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left reads as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` in `src/config.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
 
 ### High score
 
@@ -86,7 +96,7 @@ The high score is three digit bytes at `$c000`-`$c002`, with a signature byte `$
 
 ### Tuning
 
-These constants at the top of `src/main.asm` change the difficulty without touching the logic:
+These constants in `src/config.asm` change the difficulty without touching the logic:
 
 - `ENEMY_SPEED`: starting fall speed in pixels per frame.
 - `MAX_SPEED`: the fastest the enemy gets.
@@ -94,13 +104,14 @@ These constants at the top of `src/main.asm` change the difficulty without touch
 - `HIT_FRAMES`: how long the border flashes after a hit.
 - `MUSIC_FRAMES`: frames per music note, higher is slower.
 - `STARS`: number of stars (the speed and colour tables repeat every 3).
-- Homing rate: the `and #%00000001` before the homing code. Use `#%00000011` for slower homing.
+- Homing rate: the `and #%00000001` before the homing code, in `src/main.asm`. Use `#%00000011` for slower homing.
 
 ## Notes on ACME
 
 - `.local` labels belong to a `!zone`, not to the nearest normal label. Give each subroutine its own `!zone` if they share a local label name such as `.done`.
 - `+` and `-` are anonymous labels: a branch to `+` goes to the next `+` below, a branch to `-` to the previous `-` above.
 - `!scr "text"` converts to C64 screen codes. Lowercase in the source shows as capitals on screen in the default character set.
+- `!source "src/file.asm"` pastes another file in at that spot, so a program can be split over several files and still assemble into one `.prg`. ACME looks for the path from the folder you run it in, and VS64 passes the project folder with `-I`.
 - `!for k, 0, 7 { ... }` repeats a block at assembly time, which is how the 8 star shapes are written.
 - VS64 passes `-DDEBUG=1` to ACME for its debug build, so never name your own symbol `DEBUG`: the build fails with "Symbol already defined". Test that build with `acme -DDEBUG=1 -f cbm --cpu 6510 -o /dev/null src/main.asm`.
 

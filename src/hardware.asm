@@ -1,0 +1,52 @@
+; hardware.asm - names for the C64 chips, fixed memory areas and colours
+; Only names live here, no code or data, so nothing in this file takes up any memory.
+
+; Names for the hardware registers (VIC-II video chip, SID sound chip and CIA 1 I/O chip)
+SPRITE_PTR = $07f8                  ; sprite 0 data pointer, value * 64 = address of its shape
+SPRITE1_PTR = $07f9                 ; sprite 1 data pointer
+SPR0_X     = $d000                  ; sprite 0 X position (low 8 bits)
+SPR0_Y     = $d001                  ; sprite 0 Y position
+SPR_XHI    = $d010                  ; bit 8 of every sprite's X: bit 0 = ship, bit 1 = enemy (X can reach 343, one byte only 255)
+SPR1_X     = $d002                  ; sprite 1 (the enemy) X position
+SPR1_Y     = $d003                  ; sprite 1 Y position
+SPR_ENABLE = $d015                  ; one bit per sprite: 1 = visible
+SPR_COLL   = $d01e                  ; sprite-sprite collision, one bit per sprite, cleared when read
+SPR0_COLOR = $d027                  ; sprite 0 colour (0-15)
+SPR1_COLOR = $d028                  ; sprite 1 colour (0-15)
+VIC_RASTER = $d012                  ; the raster line the beam is currently drawing
+VIC_BORDER = $d020                  ; border colour
+VIC_BG     = $d021                  ; background colour
+CIA1_PORTB = $dc01                  ; keyboard rows / joystick port 1
+CIA1_DDRA  = $dc02                  ; data direction of port A: 1 = output, 0 = input (per pin)
+CIA1_DDRB  = $dc03                  ; data direction of port B
+CIA1_PORTA = $dc00                ; joystick port 2, bits are 0 when pressed: up, down, left, right, fire
+SID_FREQ1L = $d400                  ; SID voice 1 frequency, low byte
+SID_FREQ1H = $d401                  ; SID voice 1 frequency, high byte
+SID_CTRL1  = $d404                  ; SID voice 1 control (bit 7 = noise, bit 0 = gate: 0 to 1 starts the sound)
+SID_AD1    = $d405                  ; SID voice 1 attack (high nibble) and decay (low nibble)
+SID_SR1    = $d406                  ; SID voice 1 sustain (high nibble) and release (low nibble)
+SID_VOLUME = $d418                  ; SID master volume (low nibble), bit 7 = mute voice 3
+SID_FREQ3L = $d40e                  ; SID voice 3 frequency, low byte
+SID_FREQ3H = $d40f                  ; SID voice 3 frequency, high byte
+SID_CTRL3  = $d412                  ; SID voice 3 control (bit 7 = noise waveform)
+SID_OSC3   = $d41b                  ; SID voice 3 oscillator output, with noise this is a random byte
+COLOR_RED   = 2                     ; C64 colour number for red
+COLOR_ORANGE = 8                    ; C64 colour number for orange
+COLOR_YELLOW = 7                    ; C64 colour number for yellow
+SPR_MULTI  = $d01c                  ; one bit per sprite: 1 = multicolor sprite
+SPR_MC0    = $d025                  ; multicolor 0, shared by all sprites (bit pair 01)
+SPR_MC1    = $d026                  ; multicolor 1, shared by all sprites (bit pair 11)
+SCREEN     = $0400                  ; screen memory, 40x25 characters, one byte per character
+COLOR_RAM  = $d800                  ; colour memory, one byte per character, same layout as the screen
+COLOR_WHITE = 1                     ; C64 colour number for white
+VIC_MEMCTL = $d018                  ; bits 4-7: screen address / $400, bits 1-3: character set address / $800
+CPU_PORT   = $01                    ; processor port: bit 2 = 0 shows the character ROM at $d000 instead of I/O
+COLOR_DGREY = 11                    ; C64 colour number for dark grey
+COLOR_LGREY = 15                    ; C64 colour number for light grey
+SID_FREQ2L = $d407                  ; SID voice 2 frequency, low byte
+SID_FREQ2H = $d408                  ; SID voice 2 frequency, high byte
+SID_PW2L   = $d409                  ; SID voice 2 pulse width, low byte
+SID_PW2H   = $d40a                  ; SID voice 2 pulse width, high nibble ($08 = square wave)
+SID_CTRL2  = $d40b                  ; SID voice 2 control (bit 6 = pulse wave, bit 0 = gate)
+SID_AD2    = $d40c                  ; SID voice 2 attack and decay
+SID_SR2    = $d40d                  ; SID voice 2 sustain and release

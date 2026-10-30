@@ -6,7 +6,7 @@ OUT    = build/$(NAME).prg
 
 all: $(OUT)
 
-$(OUT): $(SRC)
+$(OUT): $(wildcard src/*.asm)
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/$(NAME).lbl -r build/$(NAME).rpt -o $@ $(SRC)
 
