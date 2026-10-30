@@ -2,7 +2,7 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
+A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
 
 ## Tools
 
@@ -31,6 +31,7 @@ Keys sometimes stay "pressed" or seem to be ignored when VICE is played with the
 - Avoid holding three arrow keys at once, and release keys in the reverse order of pressing them.
 - Tap a stuck key once to clear it.
 - A USB gamepad mapped under Settings > Input > Joystick avoids the keyboard altogether.
+- VICE can also invent input out of nothing (see Title screen). A browser emulator such as vc64web, or real hardware, does not.
 
 To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: the five digits on the top row are up, down, left, right and fire (0 = pressed).
 
@@ -45,6 +46,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/score.asm         score and high score
     src/starfield.asm     RAM character set, scrolling stars, random_column
     src/music.asm         the tune on SID voice 2
+    src/title.asm         the title screen and the any-key check
     src/data.asm          tables and text (star data, note tables, labels)
     src/sprites.asm       the ship and enemy shapes at $2000
     project-config.json   VS64 project settings (toolkit: acme)
@@ -62,13 +64,19 @@ Every line of every file is commented. `main.asm` pulls the others in with `!sou
 - Random numbers come from SID voice 3 set to noise (`$d41b`). It is muted so it stays silent. The enemy spawns at X = 24 + random column x 8 + 0 to 7 (`spawn_enemy`).
 - The score is three separate digit bytes (hundreds, tens, ones) in zero page `$04`-`$06`, printed by adding `$30` to each digit.
 
+### Title screen
+
+`title_screen` (in `src/title.asm`) runs once at startup, before the first enemy appears. It hides the sprites, then loops once per frame: scroll the stars, play the tune, redraw the three text lines (a star passing over a letter would otherwise leave a hole), and call `any_key`. The title letters cycle through 8 colours and "push any key to start" flashes. `any_key` reports carry set when joystick port 2 has a pin low or any key in the keyboard matrix is down: it briefly drives all 8 keyboard columns low and reads the rows, then puts the CIA ports back as inputs for the game. A press only counts when everything has been quiet for `RELEASE_FRAMES` frames first (so the RUN key from autostart and stray input are ignored) and the key then stays down for `KEY_FRAMES` frames in a row.
+
+Note: VICE sometimes reports input that nobody pressed (for example joystick down+right, `10101`, or some keyboard rows low), and then the game starts by itself. This happened in about half of headless VICE runs with no input at all, and it is probably the cause of the sticking directions below. A browser emulator (vc64web) did not do it. The game code reads exactly what the emulator gives it.
+
 ### Memory map
 
 | Address | Use |
 |---------|-----|
 | `$0400`-`$07e7` | screen memory (`$07f8`/`$07f9` hold the sprite pointers) |
 | `$0801` | BASIC stub, `10 SYS 2064` |
-| `$0810` | the code, data tables and music (ends around `$0c71`) |
+| `$0810` | the code, data tables and music (ends around `$0e30`) |
 | `$2000`-`$20ff` | the four sprite shapes (blocks 128-131) |
 | `$2800`-`$2fff` | RAM character set: ROM letters and digits plus the star shapes |
 | `$c000`-`$c003` | high score and its signature byte |
@@ -85,6 +93,8 @@ Every line of every file is commented. `main.asm` pulls the others in with `!sou
 | `$09` | `frame_count` | frame counter, slows the homing, drives the sprite animation |
 | `$0a` | `music_timer` | frames left until the next music note |
 | `$0b` | `music_step` | which of the 32 notes plays next |
+| `$0c` | `key_count` | title screen: frames in a row with a key down |
+| `$0d` | `clean_count` | title screen: frames in a row with no key, counts up to `RELEASE_FRAMES` |
 | `$fb`-`$fe` | `star_ptr`, `star_cptr` | pointers to a star's screen and colour RAM cell |
 | `$fd`-`$fe` | `xlo`, `xhi` | scratch for building the enemy's 9-bit spawn X (shares the bytes of `star_cptr`, never used at the same time) |
 
@@ -129,7 +139,7 @@ These constants in `src/config.asm` change the difficulty without touching the l
 
 ## Ideas for later
 
-- Save the high score to disk once there is a game-over or title screen.
-- Title screen and game-over state.
+- Save the high score to disk now that there is a title screen.
+- A game-over state that returns to the title.
 - More enemies at once (sprites 2-7 are free).
 - A second music voice (bass or drums) and a title tune.

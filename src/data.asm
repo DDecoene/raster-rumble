@@ -25,3 +25,12 @@ score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
 hi_label
         !scr "hi "                  ; 3 characters, printed at column 31
+
+title_text
+        !scr "raster rumble"        ; 13 letters, TITLE_LEN
+sub_text
+        !scr "dodge the falling enemy" ; 23 letters, SUB_LEN
+prompt_text
+        !scr "push any key to start" ; 21 letters, PROMPT_LEN
+title_colours
+        !byte 2, 8, 7, 5, 3, 14, 4, 10 ; red orange yellow green cyan lblue purple lred: the colours that slide along the title

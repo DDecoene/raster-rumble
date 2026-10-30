@@ -8,6 +8,7 @@
 ;   src/score.asm      score and high score
 ;   src/starfield.asm  RAM character set, scrolling stars, random_column
 ;   src/music.asm      the tune on SID voice 2
+;   src/title.asm      the title screen and the any-key check
 ;   src/data.asm       tables and text
 ;   src/sprites.asm    the ship and enemy shapes at $2000
 ;
@@ -57,8 +58,6 @@ start
         sta SPRITE_PTR              ; tell the VIC sprite 0 uses that shape
         lda #enemy_data / 64        ; enemy shape address divided by 64 = pointer value (129)
         sta SPRITE1_PTR             ; tell the VIC sprite 1 uses that shape
-        lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 on
-        sta SPR_ENABLE              ; show the ship and the enemy
         lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 are multicolor
         sta SPR_MULTI               ; 12 fat pixels per row, 4 colours (including transparent) per sprite
         lda #COLOR_ORANGE           ; multicolor 0 is shared by all sprites
@@ -144,6 +143,7 @@ start
         jsr init_hiscore            ; keep the old high score if RAM has one, else 000, and draw it
         jsr reset_score             ; score = 000 and draw it
         jsr reset_difficulty        ; enemy starts at its slowest speed
+        jsr title_screen            ; wait on the title until a key is pressed (it also switches the sprites on)
         jsr spawn_enemy             ; put the enemy at the top at a random X
         lda SPR_COLL               ; read the collision register once to clear leftovers
 
@@ -261,5 +261,6 @@ frame                               ; the game loop, runs once per screen refres
         !source "src/score.asm"     ; score and high score
         !source "src/starfield.asm" ; character set, stars and the random column helper
         !source "src/music.asm"     ; the tune
+        !source "src/title.asm"     ; the title screen and the any-key check
         !source "src/data.asm"      ; tables and text
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000
