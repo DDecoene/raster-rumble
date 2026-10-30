@@ -18,7 +18,7 @@ A title screen waits for a key (or the joystick) before the game starts. You fly
     make test   # builds, then runs it in the browser emulator (see below)
     make clean
 
-Controls: joystick in port 2. In the browser emulator the arrow keys and Space work as the joystick.
+Controls: joystick in port 2. In the browser emulator (`make test`) the arrow keys are the joystick (port 2), and Space is fire.
 
 ### Testing in the browser
 
