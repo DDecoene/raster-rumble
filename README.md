@@ -64,7 +64,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 
 ### Starfield
 
-12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Stars never touch row 0, which holds the score. `setup_charset`, `setup_stars` and `update_stars` do the work.
+12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Stars never touch row 0, which holds the score. Random columns come from `random_column`: the SID noise byte mixed with the frame counter and reduced to 0-39 by subtracting 40 repeatedly. Re-reading the noise register a few cycles after a rejected value gave strongly related values, which bunched all the stars into the left quarter of the screen. `setup_charset`, `setup_stars` and `update_stars` do the work.
 
 ### Sound
 
@@ -74,7 +74,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 
 ### Joystick and the keyboard
 
-Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key can pull those pins low and show up as ghost directions, for example Up+Left reading as all four directions at once. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` at the top of `src/main.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
+Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key combination can pull those pins low and show up as a phantom button: in VICE, arrow Up+Left reads as fire as well. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` at the top of `src/main.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
 
 ### High score
 

@@ -508,11 +508,7 @@ setup_stars                         ; subroutine: stars on rows 1, 3, 5 ... 23, 
         sta star_ptr + 1            ; high byte
         ldx #STARS - 1              ; star number, counting down
 .next
-.rnd
-        lda SID_OSC3                ; random byte
-        and #63                     ; 0-63
-        cmp #40                     ; must be a screen column 0-39
-        bcs .rnd                    ; too big, pick again
+        jsr random_column           ; A = a random screen column 0-39
         clc                         ; clear carry before adding
         adc star_ptr                ; row address + column
         sta star_lo,x               ; store this star's address, low byte
@@ -574,11 +570,7 @@ update_stars                        ; subroutine: erase every star, move it down
         lda star_ptr                ; high byte is 7: look at the low byte
         cmp #$e8                    ; $07e8 or more is past the last row
         bcc .draw2                  ; fine
-.rnd
-        lda SID_OSC3                ; respawn at the top: random byte
-        and #63                     ; 0-63
-        cmp #40                     ; must be a column 0-39
-        bcs .rnd                    ; too big, pick again
+        jsr random_column           ; respawn at the top in a random column 0-39 (returned in A)
         clc                         ; clear carry
         adc #<(SCREEN + 40)         ; plus the address of row 1, column 0
         sta star_ptr                ; low byte
@@ -605,6 +597,20 @@ update_stars                        ; subroutine: erase every star, move it down
         sta (star_cptr),y           ; colour the star
         dex                         ; next star
         bpl .loop                   ; until X goes below 0
+        rts                         ; return to the caller
+
+!zone random_column
+random_column                       ; subroutine: A = a random screen column 0-39
+        lda SID_OSC3                ; random byte from the SID noise
+        eor frame_count             ; mix in the frame counter: two reads a few cycles apart are strongly
+                                    ; related, and throwing them away and re-reading left the stars bunched left
+        eor star_ptr                ; and whatever the star code was working on, for a bit more variety
+.reduce
+        cmp #40                     ; already a column?
+        bcc .done                   ; yes
+        sbc #40                     ; no: subtract 40 (carry is set here) and look again
+        bcs .reduce                 ; the carry is still set, so this always loops
+.done
         rts                         ; return to the caller
 
 !zone update_music
