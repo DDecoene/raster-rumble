@@ -5,29 +5,30 @@ title_screen                        ; subroutine: show the title until a key or 
         lda #0                      ; A = 0
         sta SPR_ENABLE              ; hide the ship and the enemy while the title shows
         sta key_count               ; no frames with a key down yet
-        sta clean_count             ; no clean frames yet: keys are ignored until everything has been let go for a while
+        sta clean_count             ; frame counter for the waiting time at the start, keys are ignored until it is over
 .frame
         jsr wait_frame              ; wait for the next frame
         inc frame_count             ; one more frame has passed (the stars and the colours use it)
         jsr update_stars            ; the stars keep scrolling behind the title
         jsr update_music            ; and the tune keeps playing
         jsr draw_title              ; draw the text on top of any star that crossed it
+        lda clean_count             ; the first RELEASE_FRAMES frames only count time, whatever is pressed: ...
+        cmp #RELEASE_FRAMES         ; ... emulators type their own RUN keys and send stray input just after loading
+        bcc .arming                 ; still waiting
         jsr any_key                 ; is something pressed?
         bcs .down                   ; yes
         lda #0                      ; no: a single stray frame must not start the game ...
         sta key_count               ; ... so start counting key frames again
-        lda clean_count             ; have we seen enough clean frames already?
-        cmp #RELEASE_FRAMES         ; (this is what ignores the RUN key from autostart, the last game's fire and stray emulator bits)
-        bcs .frame                  ; yes, nothing more to count
-        inc clean_count             ; one more clean frame
+        lda #RELEASE_FRAMES + 1     ; and one frame with nothing pressed is the all-clear:
+        sta clean_count             ; from now on a key press counts
+        jmp .frame                  ; show the next frame
+.arming
+        inc clean_count             ; one more frame of waiting
         jmp .frame                  ; show the next frame
 .down
-        lda clean_count             ; are keys being accepted yet?
-        cmp #RELEASE_FRAMES         ; (carry set = yes)
-        bcs .count                  ; yes
-        lda #0                      ; no: whatever is down was there too early, so ...
-        sta clean_count             ; ... start the wait for clean frames again
-        beq .frame                  ; zero flag is set, so this always branches
+        lda clean_count             ; was the all-clear given yet? (a key still held from the loading does not count)
+        cmp #RELEASE_FRAMES + 1     ; carry set = yes
+        bcc .frame                  ; no, keep waiting
 .count
         inc key_count               ; one more frame with a key down
         lda key_count               ; how many in a row?
@@ -130,11 +131,17 @@ wait_frame                          ; subroutine: return once per screen refresh
         rts                         ; return to the caller
 
 !zone cia_inputs
-cia_inputs                          ; subroutine: both CIA 1 ports as inputs with their latches high, like at startup
+cia_inputs                          ; subroutine: both CIA 1 ports as inputs with their latches high, timers off the port pins
         lda #$ff                    ; all bits 1
         sta CIA1_PORTA              ; port A latch high (nothing selected)
         sta CIA1_PORTB              ; port B latch high
         lda #$00                    ; 0 = every pin is an input
         sta CIA1_DDRA               ; port A all inputs, so only the joystick can pull a line low
         sta CIA1_DDRB               ; port B all inputs, so a held key cannot pull a joystick line low
+        lda CIA1_CRA                ; timer A control
+        and #%11111101              ; bit 1 = 0: the timer does not take over port B pin 6 (it would look like a key down)
+        sta CIA1_CRA                ; store it back, the timer keeps running
+        lda CIA1_CRB                ; timer B control
+        and #%11111101              ; bit 1 = 0: the timer does not take over port B pin 7 (row 7: Space, Q, Run/Stop ...)
+        sta CIA1_CRB                ; store it back
         rts                         ; return to the caller
