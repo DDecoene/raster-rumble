@@ -28,7 +28,7 @@ The game runs in the vc64web browser emulator:
     make serve     # only the server, on http://127.0.0.1:8000 (Ctrl-C stops it)
     make stop      # stops the server that make test leaves running in the background
 
-The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and a small loader that the server adds to the page fetches it from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also changes the emulator a little as it serves it: it adds a loader that fetches the newest build once the emulator runs (the emulator's own load-from-address feature did not work in every browser), and it replaces the offline cache that would keep serving an old build.
+The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`. It also changes the emulator a little as it serves it: it adds a small loader that fetches the newest build once the emulator runs (the emulator's own load-from-address feature did not work in every browser) and puts the keyboard on joystick port 2, and it replaces the offline cache that would keep serving an old build. So there is nothing to upload. After a change, run `make test` again, or `make` and reload the page. `make test` waits until the server answers before it opens the browser. The server keeps running in the background until you run `make stop`.
 
 ### Joystick readout
 
@@ -66,7 +66,7 @@ Every line of every file is commented. `main.asm` pulls the others in with `!sou
 
 ### Title screen
 
-`title_screen` (in `src/title.asm`) runs once at startup, before the first enemy appears. It hides the sprites, then loops once per frame: scroll the stars, play the tune, redraw the three text lines (a star passing over a letter would otherwise leave a hole), and call `any_key`. The title letters cycle through 8 colours and "push any key to start" flashes. `any_key` reports carry set when joystick port 2 has a pin low or any key in the keyboard matrix is down: it briefly drives all 8 keyboard columns low and reads the rows, then puts the CIA ports back as inputs for the game. For the first `RELEASE_FRAMES` frames all input is ignored (an emulator types its own RUN keys then), and a press only counts after one frame with nothing pressed; it then has to be down for `KEY_FRAMES` frames.
+`title_screen` (in `src/title.asm`) runs once at startup, before the first enemy appears. It hides the sprites, then loops once per frame: scroll the stars, play the tune, redraw the three text lines (a star passing over a letter would otherwise leave a hole), and call `any_key`. The title letters cycle through 8 colours and "push any key to start" flashes. `any_key` first calls `cia_inputs` (both CIA ports back to inputs, timers off the port pins), then reports carry set when joystick port 2 has a pin low or any key in the keyboard matrix is down: it briefly drives all 8 keyboard columns low and reads the rows, then puts the CIA ports back as inputs for the game. For the first `RELEASE_FRAMES` frames all input is ignored (an emulator types its own RUN keys then), and a press only counts after one frame with nothing pressed; it then has to be down for `KEY_FRAMES` frames.
 
 Note: in an emulator the title used to start by itself, and a joystick direction seemed to stick (raw bits `10101`). Three causes were found in the browser emulator. (1) CIA 1 timer B was set to show on port B pin 7, so keyboard row 7 (Space, Q, Run/Stop ...) read as a key down. (2) Data direction of port B (`$dc03`) read back as `$0f` instead of 0, which let the emulated keyboard pull joystick lines low. (3) The emulator types its own `run` a few seconds after loading the game. The game now calls `cia_inputs` before every joystick read, which sets both ports back to inputs and takes the timers off the port pins, and the title ignores all keys for `RELEASE_FRAMES` frames (5 seconds) after loading. After that, a key counts as soon as it is seen down for `KEY_FRAMES` frame (a quick tap in the browser emulator lasts about one frame).
 
@@ -76,7 +76,7 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 |---------|-----|
 | `$0400`-`$07e7` | screen memory (`$07f8`/`$07f9` hold the sprite pointers) |
 | `$0801` | BASIC stub, `10 SYS 2064` |
-| `$0810` | the code, data tables and music (ends around `$0e30`) |
+| `$0810` | the code, data tables and music (ends around `$0e50`) |
 | `$2000`-`$20ff` | the four sprite shapes (blocks 128-131) |
 | `$2800`-`$2fff` | RAM character set: ROM letters and digits plus the star shapes |
 | `$c000`-`$c003` | high score and its signature byte |
@@ -93,8 +93,8 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 | `$09` | `frame_count` | frame counter, slows the homing, drives the sprite animation |
 | `$0a` | `music_timer` | frames left until the next music note |
 | `$0b` | `music_step` | which of the 32 notes plays next |
-| `$0c` | `key_count` | title screen: frames in a row with a key down |
-| `$0d` | `clean_count` | title screen: frames in a row with no key, counts up to `RELEASE_FRAMES` |
+| `$0c` | `key_count` | title screen: frames in a row with a key down (needs `KEY_FRAMES`) |
+| `$0d` | `clean_count` | title screen: frames since it appeared, counts up to `RELEASE_FRAMES`, then `RELEASE_FRAMES` + 1 once a frame with no key was seen |
 | `$fb`-`$fe` | `star_ptr`, `star_cptr` | pointers to a star's screen and colour RAM cell |
 | `$fd`-`$fe` | `xlo`, `xhi` | scratch for building the enemy's 9-bit spawn X (shares the bytes of `star_cptr`, never used at the same time) |
 
