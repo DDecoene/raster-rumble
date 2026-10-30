@@ -23,8 +23,8 @@ serve: $(OUT) tools/vc64web
 # build, (re)start the server so it always runs the current tools/serve.py, open the game in the browser emulator
 test: $(OUT) tools/vc64web
 	@pkill -f tools/serve.py || true
-	@(python3 tools/serve.py 8000 > /dev/null 2>&1 &)
-	@sleep 1
+	@(nohup python3 tools/serve.py 8000 > /dev/null 2>&1 &)
+	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do curl -s -o /dev/null http://127.0.0.1:8000/ && break; sleep 0.5; done; curl -s -o /dev/null http://127.0.0.1:8000/ || (echo "the server did not start"; exit 1)
 	open "http://127.0.0.1:8000/#openROMS=true"
 
 # stop the server that make test left running in the background
