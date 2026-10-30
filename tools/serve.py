@@ -18,6 +18,8 @@ LOADER = b"""<script>
     tries++;
     if (tries > 120) { clearInterval(timer); return; }                 // give up after a minute
     if (typeof emulator_currently_runs === 'undefined' || !emulator_currently_runs) return;  // not running yet
+    var port = document.getElementById('port2');                       // the keyboard is the joystick in port 2:
+    if (port && port.value !== 'keys') { port.value = 'keys'; port.onchange(); }  // arrow keys steer, Space is fire
     if (tries < 8) return;                                             // let the emulator's own load go first
     clearInterval(timer);
     if (typeof file_slot_file_name !== 'undefined' && file_slot_file_name) return;           // it already loaded a game
