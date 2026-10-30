@@ -2,7 +2,7 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score.
+You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. A hit flashes the border, plays an explosion and resets your score. The best score of the session stays on screen as `hi`.
 
 ## Tools
 
@@ -32,7 +32,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 ## How it works
 
 - The program loads at `$0801` with a BASIC stub (`10 SYS 2064`), and the code starts at `$0810`. A build-time check fails if `start` moves off 2064.
-- Sprite 0 is the ship (shape at `$2000`, pointer 128). Sprite 1 is the enemy (shape at `$2040`, pointer 129).
+- Sprite 0 is the ship, sprite 1 is the enemy. Both are multicolor (12 fat pixels per row, 2 bits each: transparent, own colour, plus orange and yellow shared by both sprites via `$d025`/`$d026`) and have two animation frames. Shapes: ship A `$2000` (pointer 128), enemy A `$2040` (129), ship B `$2080` (130), enemy B `$20c0` (131). The frame switches every 8 frames by bit 3 of `frame_count`. The shapes are drawn as ASCII art in the comments next to each row (`.` transparent, `a` orange, `b` own colour, `c` yellow).
 - The main loop waits for raster line `$fb` once per frame, then reads the joystick, moves the enemy, checks the hardware sprite collision register (`$d01e`) and updates the score.
 - Random enemy positions come from SID voice 3 set to noise (`$d41b`). It is muted so it stays silent.
 - The explosion is a noise burst on SID voice 1, retriggered by switching its gate off and on.
@@ -48,6 +48,10 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 | `$07` | `enemy_speed` | pixels per frame the enemy falls |
 | `$08` | `dodge_count` | dodges since the last speed-up |
 | `$09` | `frame_count` | frame counter, slows the homing |
+
+### High score
+
+The high score is three digit bytes at `$c000`-`$c002`, with a signature byte `$a5` at `$c003`. `$c000` is free RAM outside the program and the zero page, so nothing clears it: it survives hits, a restart with `RUN` and a reload of the program. Power-off wipes it. At startup `init_hiscore` checks the signature: if it is missing the high score is set to 000 and signed, otherwise the old value is kept. `update_hiscore` runs after every dodge and copies the score over when it is higher. It is drawn at the top right (`hi 000`).
 
 ### Tuning
 
@@ -67,7 +71,7 @@ These constants at the top of `src/main.asm` change the difficulty without touch
 
 ## Ideas for later
 
-- High score: in RAM first, then saved to disk once there is a game-over or title screen.
+- Save the high score to disk once there is a game-over or title screen.
 - Title screen and game-over state.
 - More enemies at once (sprites 2-7 are free).
 - Music and more sound effects.

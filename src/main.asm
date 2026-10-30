@@ -59,11 +59,24 @@ MAX_SPEED   = 5                     ; the enemy never falls faster than this
 DODGES_PER_LEVEL = 10               ; every 10 dodged enemies the enemy gets 1 pixel per frame faster
 HIT_FRAMES  = 10                    ; how many frames the border stays red after a hit
 COLOR_RED   = 2                     ; C64 colour number for red
+COLOR_ORANGE = 8                    ; C64 colour number for orange
+COLOR_YELLOW = 7                    ; C64 colour number for yellow
+SPR_MULTI  = $d01c                  ; one bit per sprite: 1 = multicolor sprite
+SPR_MC0    = $d025                  ; multicolor 0, shared by all sprites (bit pair 01)
+SPR_MC1    = $d026                  ; multicolor 1, shared by all sprites (bit pair 11)
 
 SCREEN     = $0400                  ; screen memory, 40x25 characters, one byte per character
 COLOR_RAM  = $d800                  ; colour memory, one byte per character, same layout as the screen
 SCORE_POS  = SCREEN + 6             ; where the three score digits are printed (after the word "score ")
 COLOR_WHITE = 1                     ; C64 colour number for white
+HI_POS     = SCREEN + 34            ; where the three high score digits are printed (after "hi " at column 31)
+
+; The high score lives at $c000, a free RAM block outside our program and the zero page.
+; Nothing loads over it or clears it, so it survives hits, a restart with RUN and a reload.
+; A power-off wipes it, which is why a magic byte says whether the bytes are valid.
+hi_score   = $c000                  ; three bytes, $c000 $c001 $c002: hundreds, tens, ones (each 0-9)
+hi_magic   = $c003                  ; holds HI_MAGIC once hi_score has been set up
+HI_MAGIC   = $a5                    ; any value that random power-on RAM is unlikely to hold
 
 joy       = $02                     ; a spare zero-page byte where we keep a copy of the joystick
 hit_timer = $03                     ; frames left to show the red border (0 = not flashing)
@@ -89,8 +102,14 @@ start
         sta SPRITE1_PTR             ; tell the VIC sprite 1 uses that shape
         lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 on
         sta SPR_ENABLE              ; show the ship and the enemy
+        lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 are multicolor
+        sta SPR_MULTI               ; 12 fat pixels per row, 4 colours (including transparent) per sprite
+        lda #COLOR_ORANGE           ; multicolor 0 is shared by all sprites
+        sta SPR_MC0                 ; orange: wing tips, engine, enemy spikes
+        lda #COLOR_YELLOW           ; multicolor 1 is shared too
+        sta SPR_MC1                 ; yellow: cockpit, flame core, enemy eyes
         lda #1                      ; colour 1 = white
-        sta SPR0_COLOR              ; sprite 0 (ship) is white
+        sta SPR0_COLOR              ; sprite 0 (ship) hull is white
         lda #COLOR_RED              ; colour 2 = red
         sta SPR1_COLOR              ; sprite 1 (enemy) is red
         lda #160                    ; start X: roughly the middle
@@ -138,10 +157,22 @@ start
         dex                         ; previous cell
         bpl -                       ; until X goes below 0 (bit 7 set)
 
+        ldx #2                      ; 3 characters: "hi ", counting down from 2
+-       lda hi_label,x              ; one character of "hi "
+        sta SCREEN + 31,x           ; put it on the top row, column 31
+        dex                         ; previous character
+        bpl -                       ; until X goes below 0
+        lda #COLOR_WHITE            ; A = white
+        ldx #5                      ; 6 cells: "hi " plus 3 digits, counting down from 5
+-       sta COLOR_RAM + 31,x        ; make this character white
+        dex                         ; previous cell
+        bpl -                       ; until X goes below 0
+
+        jsr init_hiscore            ; keep the old high score if RAM has one, else 000, and draw it
         jsr reset_score             ; score = 000 and draw it
         jsr reset_difficulty        ; enemy starts at its slowest speed
         jsr spawn_enemy             ; put the enemy at the top at a random X
-        lda SPR_COLL                ; read the collision register once to clear leftovers
+        lda SPR_COLL               ; read the collision register once to clear leftovers
 
 frame                               ; the game loop, runs once per screen refresh (50 Hz on PAL)
         lda #$fb                    ; the raster line we wait for (near the bottom of the screen)
@@ -151,6 +182,17 @@ frame                               ; the game loop, runs once per screen refres
         beq -                       ; still on it, keep waiting (so we only run once per frame)
 
         inc frame_count             ; one more frame has passed
+
+        lda frame_count             ; animation: switch frame every 8 frames
+        lsr                         ; shift right 3 times so bit 3 of the counter ...
+        lsr                         ; ... ends up in bit 0
+        lsr                         ; (lsr alone on A shifts the accumulator)
+        and #%00000001              ; 0 = frame A, 1 = frame B
+        asl                         ; times 2, because frame B shapes sit 2 blocks further on
+        ora #sprite_data / 64       ; 128 for frame A, 130 for frame B: the ship pointer
+        sta SPRITE_PTR              ; ship shape for this frame
+        ora #1                      ; +1 gives 129 or 131: the enemy pointer
+        sta SPRITE1_PTR             ; enemy shape for this frame
 
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
         sta joy                     ; keep a copy, because we shift it bit by bit
@@ -199,6 +241,7 @@ frame                               ; the game loop, runs once per screen refres
         cmp #MAX_Y                  ; has it reached the bottom?
         bcc +                       ; no (A < MAX_Y), carry on
         jsr add_score               ; the enemy got past us: +1 point
+        jsr update_hiscore          ; if that beat the high score, it becomes the new one
         jsr count_dodge             ; every 10 dodges the enemy speeds up
         jsr spawn_enemy             ; respawn it at the top
 +
@@ -304,55 +347,158 @@ draw_score                          ; subroutine: print the three digits on the 
         sta SCORE_POS + 2           ; print it
         rts                         ; return to the caller
 
+!zone init_hiscore
+init_hiscore                        ; subroutine: validate the high score in RAM, then draw it
+        lda hi_magic                ; is our signature there?
+        cmp #HI_MAGIC               ; compare with the expected value
+        beq .draw                   ; yes, the old high score is valid, keep it
+        lda #0                      ; no (fresh power-on): A = 0
+        sta hi_score                ; hundreds = 0
+        sta hi_score + 1            ; tens = 0
+        sta hi_score + 2            ; ones = 0
+        lda #HI_MAGIC               ; now sign it ...
+        sta hi_magic                ; ... so the next start keeps it
+.draw
+        jmp draw_hiscore            ; show it (draw_hiscore returns to our caller)
+
+!zone update_hiscore
+update_hiscore                      ; subroutine: if score > hi_score, copy score into hi_score
+        lda score                   ; compare hundreds first, the most significant digit
+        cmp hi_score                ; carry clear if score < hi_score
+        bcc .done                   ; lower, so no new record
+        bne .copy                   ; higher, so a new record
+        lda score + 1               ; hundreds equal: compare tens
+        cmp hi_score + 1            ; same test
+        bcc .done                   ; lower
+        bne .copy                   ; higher
+        lda score + 2               ; tens equal too: compare ones
+        cmp hi_score + 2            ; same test
+        bcc .done                   ; lower
+        beq .done                   ; all equal: not a new record
+.copy
+        lda score                   ; copy the three digits
+        sta hi_score                ; hundreds
+        lda score + 1               ; tens
+        sta hi_score + 1            ; store it
+        lda score + 2               ; ones
+        sta hi_score + 2            ; store it
+        jmp draw_hiscore            ; show it (draw_hiscore returns to our caller)
+.done
+        rts                         ; return to the caller
+
+draw_hiscore                        ; subroutine: print the three high score digits
+        lda hi_score                ; hundreds digit, a number 0-9
+        ora #$30                    ; turn the number into a character
+        sta HI_POS                  ; print it
+        lda hi_score + 1            ; tens digit
+        ora #$30                    ; turn the number into a character
+        sta HI_POS + 1              ; print it
+        lda hi_score + 2            ; ones digit
+        ora #$30                    ; turn the number into a character
+        sta HI_POS + 2              ; print it
+        rts                         ; return to the caller
+
 score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
+hi_label
+        !scr "hi "                  ; 3 characters, printed at column 31
 
-        * = $2000                   ; the sprite shape goes at $2000 (= 128 * 64)
+        * = $2000                   ; sprite shapes start here (= 128 * 64)
+; Multicolor sprite pixel pairs: 00 transparent, 01 multicolor 0 (orange), 10 the sprite's own colour,
+; 11 multicolor 1 (yellow). In the art: . = 00, a = 01, b = 10, c = 11.
 
-sprite_data                         ; 24 pixels wide x 21 rows, 3 bytes per row, 1 bit = 1 pixel
-        !byte %00000000, %00011000, %00000000   ; row 1:  nose of the ship
-        !byte %00000000, %00011000, %00000000   ; row 2
-        !byte %00000000, %00111100, %00000000   ; row 3
-        !byte %00000000, %00111100, %00000000   ; row 4
-        !byte %00000000, %01111110, %00000000   ; row 5
-        !byte %00000000, %01111110, %00000000   ; row 6
-        !byte %00000000, %11111111, %00000000   ; row 7
-        !byte %00000001, %11111111, %10000000   ; row 8:  wings start
-        !byte %00000001, %11111111, %10000000   ; row 9
-        !byte %00000011, %11111111, %11000000   ; row 10
-        !byte %00000011, %11111111, %11000000   ; row 11
-        !byte %00000111, %11100111, %11100000   ; row 12: gap opens at the tail
-        !byte %00000111, %11000011, %11100000   ; row 13
-        !byte %00001111, %11000011, %11110000   ; row 14
-        !byte %00001111, %10000001, %11110000   ; row 15
-        !byte %00011111, %10000001, %11111000   ; row 16
-        !byte %00011111, %00000000, %11111000   ; row 17
-        !byte %00011110, %00000000, %01111000   ; row 18
-        !byte %00011100, %00000000, %00111000   ; row 19
-        !byte %00011000, %00000000, %00011000   ; row 20
-        !byte %00010000, %00000000, %00001000   ; row 21: wing tips
-        !byte 0                     ; one padding byte, sprite blocks are 64 bytes (63 used)
+sprite_data                         ; ship frame A at $2000 = 128 * 64, multicolor: 12 pixels wide, 2 bits each
+        !byte %00000000, %00101000, %00000000   ;  1 .....bb.....
+        !byte %00000000, %00101000, %00000000   ;  2 .....bb.....
+        !byte %00000000, %10101010, %00000000   ;  3 ....bbbb....
+        !byte %00000000, %10101010, %00000000   ;  4 ....bbbb....
+        !byte %00000000, %10111110, %00000000   ;  5 ....bccb....
+        !byte %00000010, %10111110, %10000000   ;  6 ...bbccbb...
+        !byte %00000010, %10101010, %10000000   ;  7 ...bbbbbb...
+        !byte %00001010, %10101010, %10100000   ;  8 ..bbbbbbbb..
+        !byte %00101010, %10101010, %10101000   ;  9 .bbbbbbbbbb.
+        !byte %00101010, %10101010, %10101000   ; 10 .bbbbbbbbbb.
+        !byte %10101010, %10101010, %10101010   ; 11 bbbbbbbbbbbb
+        !byte %10101001, %10101010, %01101010   ; 12 bbbabbbbabbb
+        !byte %10100010, %10101010, %10001010   ; 13 bb.bbbbbb.bb
+        !byte %10000010, %10101010, %10000010   ; 14 b..bbbbbb..b
+        !byte %10000010, %10101010, %10000010   ; 15 b..bbbbbb..b
+        !byte %00000010, %10000010, %10000000   ; 16 ...bb..bb...
+        !byte %00000010, %01000001, %10000000   ; 17 ...ba..ab...
+        !byte %00000000, %01010101, %00000000   ; 18 ....aaaa....
+        !byte %00000000, %01111101, %00000000   ; 19 ....acca....
+        !byte %00000000, %00111100, %00000000   ; 20 .....cc.....
+        !byte %00000000, %00000000, %00000000   ; 21 ............
+        !byte 0                     ; padding, sprite blocks are 64 bytes (63 used)
 
-enemy_data                          ; the enemy shape, directly after the ship: $2040 = 129 * 64
-        !byte %00000000, %00011000, %00000000   ; row 1:  top of the diamond
-        !byte %00000000, %00111100, %00000000   ; row 2
-        !byte %00000000, %01111110, %00000000   ; row 3
-        !byte %00000000, %11111111, %00000000   ; row 4
-        !byte %00000001, %11111111, %10000000   ; row 5
-        !byte %00000011, %11111111, %11000000   ; row 6
-        !byte %00000111, %11111111, %11100000   ; row 7
-        !byte %00001111, %11111111, %11110000   ; row 8
-        !byte %00011111, %11111111, %11111000   ; row 9
-        !byte %00111111, %11111111, %11111100   ; row 10: widest row
-        !byte %00011111, %11111111, %11111000   ; row 11
-        !byte %00001111, %11111111, %11110000   ; row 12
-        !byte %00000111, %11111111, %11100000   ; row 13
-        !byte %00000011, %11111111, %11000000   ; row 14
-        !byte %00000001, %11111111, %10000000   ; row 15
-        !byte %00000000, %11111111, %00000000   ; row 16
-        !byte %00000000, %01111110, %00000000   ; row 17
-        !byte %00000000, %00111100, %00000000   ; row 18
-        !byte %00000000, %00011000, %00000000   ; row 19: bottom of the diamond
-        !byte %00000000, %00000000, %00000000   ; row 20: empty
-        !byte %00000000, %00000000, %00000000   ; row 21: empty
-        !byte 0                     ; one padding byte, sprite blocks are 64 bytes (63 used)
+enemy_data                          ; enemy frame A at $2040 = 129 * 64
+        !byte %01000000, %00000000, %00000001   ;  1 a..........a
+        !byte %01010000, %00000000, %00000101   ;  2 aa........aa
+        !byte %00010100, %10101010, %00010100   ;  3 .aa.bbbb.aa.
+        !byte %00000110, %10101010, %10010000   ;  4 ..abbbbbba..
+        !byte %00001010, %10101010, %10100000   ;  5 ..bbbbbbbb..
+        !byte %00101010, %10101010, %10101000   ;  6 .bbbbbbbbbb.
+        !byte %00101011, %11101011, %11101000   ;  7 .bbccbbccbb.
+        !byte %10101011, %11101011, %11101010   ;  8 bbbccbbccbbb
+        !byte %10101011, %11101011, %11101010   ;  9 bbbccbbccbbb
+        !byte %10101010, %10101010, %10101010   ; 10 bbbbbbbbbbbb
+        !byte %00101010, %10101010, %10101000   ; 11 .bbbbbbbbbb.
+        !byte %00101001, %10101010, %01101000   ; 12 .bbabbbbabb.
+        !byte %00001010, %01010101, %10100000   ; 13 ..bbaaaabb..
+        !byte %00001010, %10101010, %10100000   ; 14 ..bbbbbbbb..
+        !byte %00000010, %00101000, %10000000   ; 15 ...b.bb.b...
+        !byte %00000010, %00101000, %10000000   ; 16 ...b.bb.b...
+        !byte %00000100, %00101000, %00010000   ; 17 ..a..bb..a..
+        !byte %00000100, %00000000, %00010000   ; 18 ..a......a..
+        !byte %00000000, %00000000, %00000000   ; 19 ............
+        !byte %00000000, %00000000, %00000000   ; 20 ............
+        !byte %00000000, %00000000, %00000000   ; 21 ............
+        !byte 0                     ; padding, sprite blocks are 64 bytes (63 used)
+
+ship_data_b                         ; ship frame B at $2080 = 130 * 64 (shorter flame)
+        !byte %00000000, %00101000, %00000000   ;  1 .....bb.....
+        !byte %00000000, %00101000, %00000000   ;  2 .....bb.....
+        !byte %00000000, %10101010, %00000000   ;  3 ....bbbb....
+        !byte %00000000, %10101010, %00000000   ;  4 ....bbbb....
+        !byte %00000000, %10111110, %00000000   ;  5 ....bccb....
+        !byte %00000010, %10111110, %10000000   ;  6 ...bbccbb...
+        !byte %00000010, %10101010, %10000000   ;  7 ...bbbbbb...
+        !byte %00001010, %10101010, %10100000   ;  8 ..bbbbbbbb..
+        !byte %00101010, %10101010, %10101000   ;  9 .bbbbbbbbbb.
+        !byte %00101010, %10101010, %10101000   ; 10 .bbbbbbbbbb.
+        !byte %10101010, %10101010, %10101010   ; 11 bbbbbbbbbbbb
+        !byte %10101001, %10101010, %01101010   ; 12 bbbabbbbabbb
+        !byte %10100010, %10101010, %10001010   ; 13 bb.bbbbbb.bb
+        !byte %10000010, %10101010, %10000010   ; 14 b..bbbbbb..b
+        !byte %10000010, %10101010, %10000010   ; 15 b..bbbbbb..b
+        !byte %00000010, %10000010, %10000000   ; 16 ...bb..bb...
+        !byte %00000010, %01000001, %10000000   ; 17 ...ba..ab...
+        !byte %00000000, %00010100, %00000000   ; 18 .....aa.....
+        !byte %00000000, %00111100, %00000000   ; 19 .....cc.....
+        !byte %00000000, %00000000, %00000000   ; 20 ............
+        !byte %00000000, %00000000, %00000000   ; 21 ............
+        !byte 0                     ; padding, sprite blocks are 64 bytes (63 used)
+
+enemy_data_b                        ; enemy frame B at $20c0 = 131 * 64 (spikes flapped)
+        !byte %00000000, %00000000, %00000000   ;  1 ............
+        !byte %01000000, %00000000, %00000001   ;  2 a..........a
+        !byte %01010000, %10101010, %00000101   ;  3 aa..bbbb..aa
+        !byte %00010110, %10101010, %10010100   ;  4 .aabbbbbbaa.
+        !byte %00001010, %10101010, %10100000   ;  5 ..bbbbbbbb..
+        !byte %00101010, %10101010, %10101000   ;  6 .bbbbbbbbbb.
+        !byte %00101011, %11101011, %11101000   ;  7 .bbccbbccbb.
+        !byte %10101011, %11101011, %11101010   ;  8 bbbccbbccbbb
+        !byte %10101011, %11101011, %11101010   ;  9 bbbccbbccbbb
+        !byte %10101010, %10101010, %10101010   ; 10 bbbbbbbbbbbb
+        !byte %00101010, %10101010, %10101000   ; 11 .bbbbbbbbbb.
+        !byte %00101001, %10101010, %01101000   ; 12 .bbabbbbabb.
+        !byte %00001010, %01010101, %10100000   ; 13 ..bbaaaabb..
+        !byte %00001010, %10101010, %10100000   ; 14 ..bbbbbbbb..
+        !byte %00001000, %00101000, %00100000   ; 15 ..b..bb..b..
+        !byte %00010000, %00101000, %00000100   ; 16 .a...bb...a.
+        !byte %00010000, %00000000, %00000100   ; 17 .a........a.
+        !byte %00000000, %00000000, %00000000   ; 18 ............
+        !byte %00000000, %00000000, %00000000   ; 19 ............
+        !byte %00000000, %00000000, %00000000   ; 20 ............
+        !byte %00000000, %00000000, %00000000   ; 21 ............
+        !byte 0                     ; padding, sprite blocks are 64 bytes (63 used)
