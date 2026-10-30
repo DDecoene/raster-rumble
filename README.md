@@ -47,7 +47,24 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
 | `$04`-`$06` | `score` | hundreds, tens, ones |
 | `$07` | `enemy_speed` | pixels per frame the enemy falls |
 | `$08` | `dodge_count` | dodges since the last speed-up |
-| `$09` | `frame_count` | frame counter, slows the homing |
+| `$09` | `frame_count` | frame counter, slows the homing, drives the sprite animation |
+| `$0a` | `music_timer` | frames left until the next music note |
+| `$0b` | `music_step` | which of the 32 notes plays next |
+| `$fb`-`$fe` | `star_ptr`, `star_cptr` | pointers to a star's screen and colour RAM cell |
+
+### Starfield
+
+12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Stars never touch row 0, which holds the score. `setup_charset`, `setup_stars` and `update_stars` do the work.
+
+### Sound
+
+- Voice 1: sound effects, a short triangle blip for each dodge and the noise explosion on a hit.
+- Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked square wave. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
+- Voice 3: the muted random number generator.
+
+### Joystick and the keyboard
+
+Joystick port 2 is read from `$dc00`, the same CIA chip pins the keyboard matrix uses. When the joystick is mapped to keys in an emulator (arrow keys also count as C64 cursor keys), a held key can pull those pins low and show up as ghost directions, for example Up+Left reading as all four directions at once. At startup the game sets both CIA 1 ports to inputs with their latches high (`$dc00`-`$dc03`), which stops that. `SHOW_JOY = 1` at the top of `src/main.asm` prints the five raw bits (up, down, left, right, fire; 0 = pressed) on the top row for testing.
 
 ### High score
 
@@ -61,6 +78,8 @@ These constants at the top of `src/main.asm` change the difficulty without touch
 - `MAX_SPEED`: the fastest the enemy gets.
 - `DODGES_PER_LEVEL`: dodges needed per speed-up.
 - `HIT_FRAMES`: how long the border flashes after a hit.
+- `MUSIC_FRAMES`: frames per music note, higher is slower.
+- `STARS`: number of stars (the speed and colour tables repeat every 3).
 - Homing rate: the `and #%00000001` before the homing code. Use `#%00000011` for slower homing.
 
 ## Notes on ACME
@@ -74,5 +93,5 @@ These constants at the top of `src/main.asm` change the difficulty without touch
 - Save the high score to disk once there is a game-over or title screen.
 - Title screen and game-over state.
 - More enemies at once (sprites 2-7 are free).
-- Music and more sound effects.
+- A second music voice (bass or drums) and a title tune.
 - Move horizontally past 255 using the X high bit in `$d010`.

@@ -36,7 +36,11 @@ SPR1_COLOR = $d028                  ; sprite 1 colour (0-15)
 VIC_RASTER = $d012                  ; the raster line the beam is currently drawing
 VIC_BORDER = $d020                  ; border colour
 VIC_BG     = $d021                  ; background colour
-CIA1_PORTA = $dc00                  ; joystick port 2, bits are 0 when pressed: up, down, left, right, fire
+SHOW_JOY   = 0                      ; 1 = temporary test readout of the raw joystick bits on the top row
+CIA1_PORTB = $dc01                  ; keyboard rows / joystick port 1
+CIA1_DDRA  = $dc02                  ; data direction of port A: 1 = output, 0 = input (per pin)
+CIA1_DDRB  = $dc03                  ; data direction of port B
+CIA1_PORTA = $dc00                ; joystick port 2, bits are 0 when pressed: up, down, left, right, fire
 SID_FREQ1L = $d400                  ; SID voice 1 frequency, low byte
 SID_FREQ1H = $d401                  ; SID voice 1 frequency, high byte
 SID_CTRL1  = $d404                  ; SID voice 1 control (bit 7 = noise, bit 0 = gate: 0 to 1 starts the sound)
@@ -84,6 +88,28 @@ score     = $04                     ; three bytes, $04 $05 $06: hundreds, tens, 
 enemy_speed = $07                   ; pixels the enemy falls per frame right now (ENEMY_SPEED up to MAX_SPEED)
 dodge_count = $08                   ; dodged enemies since the last speed-up (0 to DODGES_PER_LEVEL - 1)
 frame_count = $09                   ; counts frames, its lowest bit flips every frame (used to slow the homing)
+music_timer = $0a                   ; frames left until the next music note
+music_step  = $0b                   ; which of the 32 notes plays next
+star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
+star_cptr   = $fd                   ; $fd $fe: the matching colour RAM address
+
+; Starfield and music
+STARS      = 12                     ; number of stars
+CHARSET    = $2800                  ; our copy of the character set (VIC reads it from here, see $d018 below)
+STAR_CHAR  = 64                     ; screen code of the first star shape: 8 shapes, a dot in pixel row 0 to 7
+VIC_MEMCTL = $d018                  ; bits 4-7: screen address / $400, bits 1-3: character set address / $800
+CPU_PORT   = $01                    ; processor port: bit 2 = 0 shows the character ROM at $d000 instead of I/O
+COLOR_DGREY = 11                    ; C64 colour number for dark grey
+COLOR_LGREY = 15                    ; C64 colour number for light grey
+MUSIC_FRAMES = 7                    ; frames per note (about 7 notes a second)
+MUSIC_LEN  = 32                     ; notes in the tune before it loops
+SID_FREQ2L = $d407                  ; SID voice 2 frequency, low byte
+SID_FREQ2H = $d408                  ; SID voice 2 frequency, high byte
+SID_PW2L   = $d409                  ; SID voice 2 pulse width, low byte
+SID_PW2H   = $d40a                  ; SID voice 2 pulse width, high nibble ($08 = square wave)
+SID_CTRL2  = $d40b                  ; SID voice 2 control (bit 6 = pulse wave, bit 0 = gate)
+SID_AD2    = $d40c                  ; SID voice 2 attack and decay
+SID_SR2    = $d40d                  ; SID voice 2 sustain and release
 
         * = $0810                   ; our code lives here (decimal 2064, matches the SYS above)
 
@@ -92,6 +118,12 @@ start
             !error "start is not at 2064, update the SYS text in the BASIC stub"
         }
         sei                         ; disable interrupts, we poll the hardware ourselves
+        lda #$ff                    ; all bits 1 = nothing selected, nothing pressed
+        sta CIA1_PORTA              ; port A output latch high (joystick port 2 and keyboard columns)
+        sta CIA1_PORTB              ; port B output latch high (joystick port 1 and keyboard rows)
+        lda #$00                    ; 0 = every pin is an input
+        sta CIA1_DDRA               ; port A all inputs, so we only read what the joystick pulls low
+        sta CIA1_DDRB               ; port B all inputs, so held keys cannot pull joystick lines low (ghost directions)
         lda #$00                    ; A = 0 (colour black)
         sta VIC_BORDER              ; border = black
         sta VIC_BG                  ; background = black
@@ -132,8 +164,22 @@ start
         lda #$08                    ; a fairly high pitch, for a crunchy noise
         sta SID_FREQ1H              ; voice 1 frequency high byte (low byte stays 0)
 
+        lda #$06                    ; voice 2 plays the music: attack 0, decay 6 (a short pluck)
+        sta SID_AD2                 ; voice 2 envelope part 1
+        lda #$00                    ; sustain 0, release 0
+        sta SID_SR2                 ; voice 2 envelope part 2
+        lda #$00                    ; pulse width $0800 = a square wave
+        sta SID_PW2L                ; pulse width low byte
+        lda #$08                    ; high nibble 8
+        sta SID_PW2H                ; pulse width high byte
+        lda #1                      ; play the first note on the next frame
+        sta music_timer             ; counts down to 0
         lda #0                      ; A = 0
+        sta music_step              ; start the tune at note 0
         sta hit_timer               ; border is not flashing yet
+
+        jsr setup_charset           ; our own character set with 8 star shapes
+        jsr setup_stars             ; put the stars at random columns
 
         lda #$20                    ; screen code $20 = space
         ldx #0                      ; X counts 0 to 255, then wraps back to 0
@@ -194,8 +240,22 @@ frame                               ; the game loop, runs once per screen refres
         ora #1                      ; +1 gives 129 or 131: the enemy pointer
         sta SPRITE1_PTR             ; enemy shape for this frame
 
+        jsr update_stars            ; scroll the starfield down
+        jsr update_music            ; play the next note when it is time
+
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
         sta joy                     ; keep a copy, because we shift it bit by bit
+!if SHOW_JOY = 1 {
+        lda joy                     ; temporary test readout: the raw bits, 1 = not pressed, 0 = pressed
+!for k, 0, 4 {
+        pha                         ; keep the shifted value
+        and #%00000001              ; the lowest bit only
+        ora #$30                    ; make it the character '0' or '1'
+        sta SCREEN + 12 + k         ; print it on the top row: up, down, left, right, fire
+        pla                         ; get the value back
+        lsr                         ; the next bit becomes the lowest
+}
+}
 
         lsr joy                     ; shift bit 0 (up) into the carry flag
         bcs +                       ; carry set = not pressed, skip the 'up' code
@@ -242,6 +302,14 @@ frame                               ; the game loop, runs once per screen refres
         bcc +                       ; no (A < MAX_Y), carry on
         jsr add_score               ; the enemy got past us: +1 point
         jsr update_hiscore          ; if that beat the high score, it becomes the new one
+        lda #$04                    ; attack 0, decay 4: a short blip
+        sta SID_AD1                 ; voice 1 envelope
+        lda #$30                    ; a high pitch
+        sta SID_FREQ1H              ; voice 1 frequency
+        lda #%00010000              ; triangle waveform, gate off (resets the envelope)
+        sta SID_CTRL1               ; voice 1 stops
+        lda #%00010001              ; triangle waveform, gate on
+        sta SID_CTRL1               ; gate 0 to 1 starts the blip
         jsr count_dodge             ; every 10 dodges the enemy speeds up
         jsr spawn_enemy             ; respawn it at the top
 +
@@ -253,6 +321,10 @@ frame                               ; the game loop, runs once per screen refres
         sta VIC_BORDER              ; flash the border
         lda #HIT_FRAMES             ; how long to flash
         sta hit_timer               ; start the flash timer
+        lda #$09                    ; decay 9: the long rumble (the dodge blip uses a shorter one)
+        sta SID_AD1                 ; voice 1 envelope
+        lda #$08                    ; low pitch for a crunchy noise
+        sta SID_FREQ1H              ; voice 1 frequency
         lda #%10000000              ; noise waveform, gate off (this resets the envelope)
         sta SID_CTRL1               ; voice 1 stops
         lda #%10000001              ; noise waveform, gate on
@@ -397,6 +469,188 @@ draw_hiscore                        ; subroutine: print the three high score dig
         ora #$30                    ; turn the number into a character
         sta HI_POS + 2              ; print it
         rts                         ; return to the caller
+
+!zone setup_charset
+setup_charset                       ; subroutine: copy the ROM letters/digits to RAM and add 8 star shapes
+        lda CPU_PORT                ; current memory configuration
+        and #%11111011              ; clear bit 2: the character ROM now shows at $d000 (I/O is hidden)
+        sta CPU_PORT                ; interrupts are off, so nothing else is using $d000 meanwhile
+        ldx #0                      ; X counts 0 to 255
+.copy
+        lda $d000,x                 ; ROM shapes of screen codes 0-31 (letters), first page
+        sta CHARSET,x               ; copy to our RAM charset
+        lda $d100,x                 ; screen codes 32-63 (space, digits), second page
+        sta CHARSET + $100,x        ; copy
+        inx                         ; next byte
+        bne .copy                   ; until X wrapped around to 0
+        lda CPU_PORT                ; memory configuration again
+        ora #%00000100              ; set bit 2: I/O is back at $d000
+        sta CPU_PORT                ; done with the ROM
+        ldx #63                     ; clear the 8 shapes (8 bytes each) of screen codes 64-71
+        lda #0                      ; empty
+.clear
+        sta CHARSET + 512,x         ; shape bytes are 0
+        dex                         ; previous byte
+        bpl .clear                  ; until X goes below 0
+        lda #%00011000              ; a 2 pixel wide dot in the middle of the 8 pixels
+!for k, 0, 7 {
+        sta CHARSET + 512 + 9 * k   ; star shape k: the dot sits in pixel row k (8 bytes per shape + k)
+}
+        lda #$1a                    ; screen memory at $0400 (high nibble 1), characters at $2800 (5 * $800)
+        sta VIC_MEMCTL              ; the VIC now reads our charset
+        rts                         ; return to the caller
+
+!zone setup_stars
+setup_stars                         ; subroutine: stars on rows 1, 3, 5 ... 23, each in a random column
+        lda #<(SCREEN + 40)         ; address of row 1, column 0 (row 0 holds the score)
+        sta star_ptr                ; low byte
+        lda #>(SCREEN + 40)         ; high byte
+        sta star_ptr + 1            ; high byte
+        ldx #STARS - 1              ; star number, counting down
+.next
+.rnd
+        lda SID_OSC3                ; random byte
+        and #63                     ; 0-63
+        cmp #40                     ; must be a screen column 0-39
+        bcs .rnd                    ; too big, pick again
+        clc                         ; clear carry before adding
+        adc star_ptr                ; row address + column
+        sta star_lo,x               ; store this star's address, low byte
+        lda star_ptr + 1            ; high byte of the row
+        adc #0                      ; plus carry
+        sta star_hi,x               ; store it
+        lda star_ptr                ; move the row pointer down 2 rows = 80 characters
+        clc                         ; clear carry
+        adc #80                     ; + 80
+        sta star_ptr                ; low byte
+        bcc .nocarry                ; no overflow
+        inc star_ptr + 1            ; overflow: high byte + 1
+.nocarry
+        txa                         ; speed depends on the star number: 1, 2 or 3 pixels per frame
+        and #%00000011              ; 0-3
+        cmp #3                      ; 3 would be too many ...
+        bcc .speed                  ; 0, 1, 2 are fine
+        lda #0                      ; ... so make it 0
+.speed
+        tay                         ; Y = 0, 1 or 2
+        lda speed_table,y           ; pixels per frame
+        sta star_spd,x              ; store the speed
+        lda colour_table,y          ; far (slow) stars are dark, near (fast) stars bright
+        sta star_col,x              ; store the colour
+        lda #0                      ; sub-pixel position 0
+        sta star_sub,x              ; start at the top of its cell
+        dex                         ; next star
+        bpl .next                   ; until X goes below 0
+        rts                         ; return to the caller
+
+!zone update_stars
+update_stars                        ; subroutine: erase every star, move it down, draw it again
+        ldx #STARS - 1              ; star number, counting down
+.loop
+        lda star_lo,x               ; screen address of this star, low byte
+        sta star_ptr                ; into the zero page pointer
+        lda star_hi,x               ; high byte
+        sta star_ptr + 1            ; into the pointer
+        ldy #0                      ; (pointer),y with Y = 0 means "the byte the pointer points at"
+        lda #$20                    ; space
+        sta (star_ptr),y            ; erase the star
+        lda star_sub,x              ; pixel row inside the cell (0-7)
+        clc                         ; clear carry before adding
+        adc star_spd,x              ; move down by the star's speed
+        cmp #8                      ; past the bottom of the cell?
+        bcc .draw                   ; no, same cell, just a different shape
+        sbc #8                      ; yes: back into 0-7 (carry is set here) ...
+        sta star_sub,x              ; (store it before the address changes)
+        lda star_ptr                ; ... and one row down = + 40 characters
+        clc                         ; clear carry
+        adc #40                     ; + 40
+        sta star_ptr                ; low byte
+        bcc .check                  ; no overflow
+        inc star_ptr + 1            ; overflow: high byte + 1
+.check
+        lda star_ptr + 1            ; did the star leave the screen? Screen ends at $07e8
+        cmp #7                      ; high byte below 7 is still on screen
+        bcc .draw2                  ; fine
+        lda star_ptr                ; high byte is 7: look at the low byte
+        cmp #$e8                    ; $07e8 or more is past the last row
+        bcc .draw2                  ; fine
+.rnd
+        lda SID_OSC3                ; respawn at the top: random byte
+        and #63                     ; 0-63
+        cmp #40                     ; must be a column 0-39
+        bcs .rnd                    ; too big, pick again
+        clc                         ; clear carry
+        adc #<(SCREEN + 40)         ; plus the address of row 1, column 0
+        sta star_ptr                ; low byte
+        lda #>(SCREEN + 40)         ; high byte of row 1
+        sta star_ptr + 1            ; high byte
+        lda star_sub,x              ; keep the pixel row it had, it flows straight on into .draw
+.draw
+        sta star_sub,x              ; remember the new pixel row
+.draw2
+        lda star_ptr                ; remember where the star is now
+        sta star_lo,x               ; low byte
+        lda star_ptr + 1            ; high byte
+        sta star_hi,x               ; store it
+        lda star_sub,x              ; the pixel row decides which of the 8 shapes to use
+        ora #STAR_CHAR              ; screen code 64 + row
+        sta (star_ptr),y            ; draw the star
+        lda star_ptr                ; colour RAM is at screen address + $d400
+        sta star_cptr               ; low byte is the same
+        lda star_ptr + 1            ; high byte
+        clc                         ; clear carry
+        adc #$d4                    ; $04xx + $d400 = $d8xx
+        sta star_cptr + 1           ; high byte
+        lda star_col,x              ; this star's colour
+        sta (star_cptr),y           ; colour the star
+        dex                         ; next star
+        bpl .loop                   ; until X goes below 0
+        rts                         ; return to the caller
+
+!zone update_music
+update_music                        ; subroutine: every MUSIC_FRAMES frames play the next note on voice 2
+        dec music_timer             ; one frame closer to the next note
+        bne .done                   ; not yet
+        lda #MUSIC_FRAMES           ; reload the timer
+        sta music_timer             ; for the next note
+        ldx music_step              ; which note?
+        lda music_lo,x              ; its frequency, low byte
+        sta SID_FREQ2L              ; set it
+        lda music_hi,x              ; high byte
+        sta SID_FREQ2H              ; set it
+        lda #%01000000              ; pulse waveform, gate off (resets the envelope)
+        sta SID_CTRL2               ; voice 2 stops
+        lda #%01000001              ; pulse waveform, gate on
+        sta SID_CTRL2               ; gate 0 to 1 plucks the note
+        inx                         ; next note
+        cpx #MUSIC_LEN              ; end of the tune?
+        bne .store                  ; no
+        ldx #0                      ; yes: loop back to the start
+.store
+        stx music_step              ; remember where we are
+.done
+        rts                         ; return to the caller
+
+; Star data: one entry per star. Zero is a placeholder, setup_stars fills them in at start.
+star_lo   !fill STARS, 0            ; screen address, low byte
+star_hi   !fill STARS, 0            ; screen address, high byte
+star_sub  !fill STARS, 0            ; pixel row inside the cell (0-7), picks the star shape
+star_spd  !fill STARS, 0            ; pixels per frame
+star_col  !fill STARS, 0            ; colour
+speed_table  !byte 1, 2, 3          ; far, middle and near stars
+colour_table !byte COLOR_DGREY, COLOR_LGREY, COLOR_WHITE
+
+; The tune: an A minor, F, C, G arpeggio, 8 notes per chord, as SID frequency values (PAL clock)
+music_lo
+        !byte $51, $f6, $a2, $67, $ed, $67, $a2, $f6   ; A2 E3 A3 C4 E4 C4 A3 E3
+        !byte $cf, $b3, $9d, $a2, $67, $a2, $9d, $b3   ; F2 C3 F3 A3 C4 A3 F3 C3
+        !byte $b3, $0a, $67, $ed, $13, $ed, $67, $0a   ; C3 G3 C4 E4 G4 E4 C4 G3
+        !byte $85, $c4, $0a, $6d, $89, $6d, $0a, $c4   ; G2 D3 G3 B3 D4 B3 G3 D3
+music_hi
+        !byte $07, $0a, $0e, $11, $15, $11, $0e, $0a   ; A2 E3 A3 C4 E4 C4 A3 E3
+        !byte $05, $08, $0b, $0e, $11, $0e, $0b, $08   ; F2 C3 F3 A3 C4 A3 F3 C3
+        !byte $08, $0d, $11, $15, $1a, $15, $11, $0d   ; C3 G3 C4 E4 G4 E4 C4 G3
+        !byte $06, $09, $0d, $10, $13, $10, $0d, $09   ; G2 D3 G3 B3 D4 B3 G3 D3
 
 score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
