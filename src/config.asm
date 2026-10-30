@@ -43,6 +43,7 @@ pal_base    = $17                   ; 0 = blue bar colours, 32 = fire bar colour
 col_base    = $18                   ; 0 = title letter colours, 8 = game over letter colours (index into letter_cols)
 row_ptr     = $19                   ; $19 $1a: screen address where the current bouncing letter goes (column of the letter included)
 crow_ptr    = $1b                   ; $1b $1c: the matching colour RAM address
+sfx_timer   = $1d                   ; frames left in which a sound effect owns voice 1 (the bass waits)
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
 xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr
 xhi         = $fe                   ; ... and its high byte (0 or 1)
@@ -51,6 +52,7 @@ STARS      = 12                     ; number of stars
 CHARSET    = $2800                  ; our copy of the character set (VIC reads it from here, see $d018 below)
 STAR_CHAR  = 64                     ; screen code of the first star shape: 8 shapes, a dot in pixel row 0 to 7
 MUSIC_FRAMES = 7                    ; frames per note (about 7 notes a second)
+SFX_FRAMES = 40                      ; after a sound effect the bass stays silent this long (0.8 s), so it does not cut the effect short
 MUSIC_LEN  = 32                     ; notes in the tune before it loops
 TITLE_ROW  = 7                      ; title screen: screen row of the big name
 SUB_ROW    = 10                     ; row of the tagline

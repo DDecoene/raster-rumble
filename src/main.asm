@@ -82,8 +82,12 @@ start
         lda #%10000000              ; bit 7 = noise waveform (gate stays off, we only read it)
         sta SID_CTRL3               ; start voice 3 as a random number generator
 
-        lda #%10001111              ; volume 15 (max), bit 7 mutes voice 3 so the random noise stays silent
+        lda #%10011111              ; volume 15 (max), bit 7 mutes voice 3 so the random noise stays silent, bit 4 = low-pass filter
         sta SID_VOLUME              ; switch the sound on
+        lda #$a2                    ; resonance 10, and voice 2 (bit 1) goes through the filter, the bass and the effects do not
+        sta SID_RES                 ; filter setup
+        lda #$00                    ; no sound effect is playing
+        sta sfx_timer
         lda #$09                    ; attack 0 (instant), decay 9 (about 0.75 seconds)
         sta SID_AD1                 ; voice 1 envelope part 1
         lda #$00                    ; sustain 0 (silent once decayed), release 0
@@ -230,14 +234,20 @@ frame                               ; the game loop, runs once per screen refres
         bcc +                       ; no (A < MAX_Y), carry on
         jsr add_score               ; the enemy got past us: +1 point
         jsr update_hiscore          ; if that beat the high score, it becomes the new one
-        lda #$04                    ; attack 0, decay 4: a short blip
+        lda #$03                    ; attack 0, decay 3: a short blip
         sta SID_AD1                 ; voice 1 envelope
-        lda #$30                    ; a high pitch
+        lda #$00                    ; sustain 0 (the bass leaves it at 6, which would hold the blip), release 0
+        sta SID_SR1                 ; voice 1 envelope part 2
+        lda #$00                    ; the bass may have left a low byte behind
+        sta SID_FREQ1L              ; voice 1 frequency, low byte
+        lda #$50                    ; a high pitch
         sta SID_FREQ1H              ; voice 1 frequency
         lda #%00010000              ; triangle waveform, gate off (resets the envelope)
         sta SID_CTRL1               ; voice 1 stops
         lda #%00010001              ; triangle waveform, gate on
         sta SID_CTRL1               ; gate 0 to 1 starts the blip
+        lda #SFX_FRAMES             ; the bass keeps quiet for a moment
+        sta sfx_timer
         jsr count_dodge             ; every 10 dodges the enemy speeds up
         jsr spawn_enemy             ; respawn it at the top
 +
@@ -251,12 +261,18 @@ frame                               ; the game loop, runs once per screen refres
         sta hit_timer               ; start the flash timer
         lda #$09                    ; decay 9: the long rumble (the dodge blip uses a shorter one)
         sta SID_AD1                 ; voice 1 envelope
+        lda #$00                    ; sustain 0 (the bass leaves it at 6), release 0
+        sta SID_SR1                 ; voice 1 envelope part 2
+        lda #$00                    ; the bass may have left a low byte behind
+        sta SID_FREQ1L              ; voice 1 frequency, low byte
         lda #$08                    ; low pitch for a crunchy noise
         sta SID_FREQ1H              ; voice 1 frequency
         lda #%10000000              ; noise waveform, gate off (this resets the envelope)
         sta SID_CTRL1               ; voice 1 stops
         lda #%10000001              ; noise waveform, gate on
         sta SID_CTRL1               ; gate 0 to 1 starts the explosion sound
+        lda #SFX_FRAMES             ; the bass keeps quiet for a moment
+        sta sfx_timer
         dec lives                   ; a hit costs a life (the score and the speed stay)
         jsr draw_lives              ; show it
         lda lives                   ; any left?

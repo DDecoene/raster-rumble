@@ -21,6 +21,11 @@ music_hi
         !byte $08, $0d, $11, $15, $1a, $15, $11, $0d   ; C3 G3 C4 E4 G4 E4 C4 G3
         !byte $06, $09, $0d, $10, $13, $10, $0d, $09   ; G2 D3 G3 B3 D4 B3 G3 D3
 
+bass_lo                             ; the root of each chord, one or two octaves below the arpeggio: A1 F1 C2 G1
+        !byte $a8, $e7, $59, $42
+bass_hi
+        !byte $03, $02, $04, $03
+
 score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
 hi_label

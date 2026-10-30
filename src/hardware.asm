@@ -28,6 +28,8 @@ SID_FREQ1H = $d401                  ; SID voice 1 frequency, high byte
 SID_CTRL1  = $d404                  ; SID voice 1 control (bit 7 = noise, bit 0 = gate: 0 to 1 starts the sound)
 SID_AD1    = $d405                  ; SID voice 1 attack (high nibble) and decay (low nibble)
 SID_SR1    = $d406                  ; SID voice 1 sustain (high nibble) and release (low nibble)
+SID_FC_HI   = $d416                  ; SID filter cutoff, high byte (the filter opens as this goes up)
+SID_RES     = $d417                  ; SID filter resonance (high nibble) and which voices go through the filter (bits 0-2)
 SID_VOLUME = $d418                  ; SID master volume (low nibble), bit 7 = mute voice 3
 SID_FREQ3L = $d40e                  ; SID voice 3 frequency, low byte
 SID_FREQ3H = $d40f                  ; SID voice 3 frequency, high byte

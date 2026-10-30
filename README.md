@@ -44,7 +44,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/actors.asm        ship and enemy: 9-bit X movement, spawning, homing, difficulty
     src/score.asm         score and high score
     src/starfield.asm     RAM character set, scrolling stars, random_column
-    src/music.asm         the tune on SID voice 2
+    src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1
     src/title.asm         the title and game over screens and the any-key check
     src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
     src/data.asm          tables and text (star data, note tables, labels)
@@ -94,6 +94,7 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 | `$09` | `frame_count` | frame counter, slows the homing, drives the sprite animation |
 | `$0a` | `music_timer` | frames left until the next music note |
 | `$0b` | `music_step` | which of the 32 notes plays next |
+| `$1d` | `sfx_timer` | frames left in which a sound effect owns voice 1 (the bass waits) |
 | `$0c` | `key_count` | title screen: frames in a row with a key down (needs `KEY_FRAMES`) |
 | `$0e` | `lives` | lives left, 0 = game over |
 | `$0f` | `title_mode` | 0 = title screen, 1 = game over screen |
@@ -107,8 +108,8 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 
 ### Sound
 
-- Voice 1: sound effects, a short triangle blip for each dodge and a noise explosion on a hit. Each one sets its own pitch and envelope, then retriggers the voice by switching the gate off and on.
-- Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked square wave. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
+- Voice 1: sound effects, a short triangle blip for each dodge and a noise explosion on a hit. Each one sets its own pitch and envelope, then retriggers the voice by switching the gate off and on. Between effects it plays a sawtooth bass: the root of the current chord (`bass_lo`, `bass_hi`) on every 4th note. An effect sets `sfx_timer` (`$1d`, `SFX_FRAMES` frames) and the bass waits until it has run out, so it never cuts an effect short. Each bass note sets its own envelope and waveform again, which also undoes what the last effect left behind.
+- Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked pulse wave. Every frame `update_music` also moves the pulse width (a sine, 4 to 11) and the filter cutoff (`$d416`, a slow sine, one turn per 256 frames) with a resonant low-pass filter on this voice only, which gives the synth sound. Voice 3 stays the random number generator. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
 - Voice 3: the muted random number generator.
 
 ### Joystick and the keyboard
@@ -159,4 +160,4 @@ These constants in `src/config.asm` change the difficulty without touching the l
 
 - Save the high score to disk now that there is a title screen.
 - More enemies at once (sprites 2-7 are free).
-- A second music voice (bass or drums) and a title tune.
+- Drums, and a title tune.
