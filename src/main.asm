@@ -27,6 +27,7 @@ SPRITE_PTR = $07f8                  ; sprite 0 data pointer, value * 64 = addres
 SPRITE1_PTR = $07f9                 ; sprite 1 data pointer
 SPR0_X     = $d000                  ; sprite 0 X position (low 8 bits)
 SPR0_Y     = $d001                  ; sprite 0 Y position
+SPR_XHI    = $d010                  ; bit 8 of every sprite's X: bit 0 = ship, bit 1 = enemy (X can reach 343, one byte only 255)
 SPR1_X     = $d002                  ; sprite 1 (the enemy) X position
 SPR1_Y     = $d003                  ; sprite 1 Y position
 SPR_ENABLE = $d015                  ; one bit per sprite: 1 = visible
@@ -54,7 +55,8 @@ SID_OSC3   = $d41b                  ; SID voice 3 oscillator output, with noise 
 
 ; Limits so the sprite stays in the visible part of the screen
 MIN_X = 24                          ; left edge of the screen area
-MAX_X = 250                         ; right edge (we only use the low 8 bits of X, so max is 255)
+MAX_X = 320                         ; right edge: the screen area is X 24 to 343 and the sprite is 24 wide.
+                                    ; X is 9 bits wide, bit 8 lives in $d010 (see SPR_XHI)
 MIN_Y = 50                          ; top edge of the screen area
 MAX_Y = 229                         ; bottom edge
 
@@ -91,6 +93,8 @@ frame_count = $09                   ; counts frames, its lowest bit flips every 
 music_timer = $0a                   ; frames left until the next music note
 music_step  = $0b                   ; which of the 32 notes plays next
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
+xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr
+xhi         = $fe                   ; ... and its high byte (0 or 1)
 star_cptr   = $fd                   ; $fd $fe: the matching colour RAM address
 
 ; Starfield and music
@@ -146,6 +150,8 @@ start
         sta SPR1_COLOR              ; sprite 1 (enemy) is red
         lda #160                    ; start X: roughly the middle
         sta SPR0_X                  ; set ship X
+        lda #$00                    ; bit 8 of every sprite X = 0
+        sta SPR_XHI                 ; (X values start below 256)
         lda #200                    ; start Y: near the bottom
         sta SPR0_Y                  ; set ship Y
 
@@ -271,28 +277,15 @@ frame                               ; the game loop, runs once per screen refres
         inc SPR0_Y                  ; Y + 1 moves the sprite down
 +       lsr joy                     ; shift bit 2 (left) into the carry flag
         bcs +                       ; carry set = not pressed, skip
-        lda SPR0_X                  ; current X
-        cmp #MIN_X                  ; already at the left edge?
-        beq +                       ; yes, don't move
-        dec SPR0_X                  ; X - 1 moves the sprite left
+        jsr ship_left               ; X - 1 (9 bits), stops at the left edge
 +       lsr joy                     ; shift bit 3 (right) into the carry flag
         bcs +                       ; carry set = not pressed, skip
-        lda SPR0_X                  ; current X
-        cmp #MAX_X                  ; already at the right edge?
-        beq +                       ; yes, don't move
-        inc SPR0_X                  ; X + 1 moves the sprite right
+        jsr ship_right              ; X + 1 (9 bits), stops at the right edge
 +
         lda frame_count             ; homing: only on every other frame, so the enemy is slower than the ship
         and #%00000001              ; keep only the lowest bit, it is 1 on every other frame
         beq +                       ; 0 = skip homing this frame
-        lda SPR1_X                  ; enemy X
-        cmp SPR0_X                  ; compare with the ship X (carry set if enemy X >= ship X)
-        beq +                       ; same X, nothing to do
-        bcs .home_left              ; the enemy is right of the ship, so move it left
-        inc SPR1_X                  ; the enemy is left of the ship, so move it right
-        jmp +                       ; done with homing
-.home_left
-        dec SPR1_X                  ; X - 1 moves the enemy left
+        jsr home_enemy              ; one pixel towards the ship
 +
         lda SPR1_Y                  ; current enemy Y
         clc                         ; clear carry before adding
@@ -342,15 +335,123 @@ frame                               ; the game loop, runs once per screen refres
 +
         jmp frame                   ; back to the top for the next frame
 
-spawn_enemy                         ; subroutine: enemy to the top, random X in the visible range
+!zone spawn_enemy
+spawn_enemy                         ; subroutine: enemy to the top, random X anywhere in the visible range
         lda #MIN_Y - 10             ; just above the visible area, so it slides in
         sta SPR1_Y                  ; set enemy Y
--       lda SID_OSC3                ; random byte from the SID noise
-        cmp #MIN_X                  ; too far left?
-        bcc -                       ; yes, pick another
-        cmp #MAX_X                  ; too far right?
-        bcs -                       ; yes, pick another
-        sta SPR1_X                  ; set enemy X
+        jsr random_column           ; A = 0 to 39
+        cmp #37                     ; we want 0 to 36 so the enemy stays fully on screen
+        bcc .ok                     ; already in range
+        sbc #37                     ; 37-39 become 0-2 (carry is set here)
+.ok
+        sta xlo                     ; build X = 24 + column * 8 + 0..7 in 9 bits: first the column ...
+        lda #0                      ; ... as a 16-bit number xhi:xlo
+        sta xhi                     ; high byte 0
+        asl xlo                     ; times 2: shift left, the bit that falls out goes into carry ...
+        rol xhi                     ; ... and rol shifts that carry into the high byte
+        asl xlo                     ; times 4
+        rol xhi                     ; (carry into the high byte again)
+        asl xlo                     ; times 8
+        rol xhi                     ; (and again)
+        lda SID_OSC3                ; random byte
+        and #%00000111              ; 0 to 7: a random pixel inside the column
+        clc                         ; clear carry before adding
+        adc xlo                     ; add it to the low byte
+        sta xlo                     ; store it
+        bcc .noc1                   ; no overflow
+        inc xhi                     ; overflow: high byte + 1
+.noc1
+        lda xlo                     ; now add the left edge
+        clc                         ; clear carry
+        adc #MIN_X                  ; + 24
+        sta xlo                     ; store it
+        bcc .noc2                   ; no overflow
+        inc xhi                     ; overflow: high byte + 1
+.noc2
+        sta SPR1_X                  ; low 8 bits of the enemy X (A still holds xlo)
+        lda SPR_XHI                 ; bit 8 of all sprites
+        and #%11111101              ; clear the enemy's bit (bit 1)
+        ldx xhi                     ; is X 256 or more?
+        beq .store                  ; no, bit stays clear
+        ora #%00000010              ; yes, set the enemy's bit 8
+.store
+        sta SPR_XHI                 ; write it back
+        rts                         ; return to the caller
+
+!zone ship_left
+ship_left                           ; subroutine: ship X - 1 as a 9-bit number, stops at MIN_X
+        lda SPR_XHI                 ; bit 0 = bit 8 of the ship X
+        and #%00000001              ; keep only that bit
+        bne .move                   ; X is 256 or more, the left edge is far away
+        lda SPR0_X                  ; low byte
+        cmp #MIN_X                  ; at the left edge?
+        beq .done                   ; yes, don't move
+.move
+        lda SPR0_X                  ; low byte again
+        bne .dec                    ; not 0, so no borrow from bit 8 needed
+        lda SPR_XHI                 ; low byte is 0: X goes from 256 to 255, so clear bit 8
+        and #%11111110              ; clear the ship's bit
+        sta SPR_XHI                 ; write it back
+.dec
+        dec SPR0_X                  ; low byte - 1 (0 wraps around to 255)
+.done
+        rts                         ; return to the caller
+
+!zone ship_right
+ship_right                          ; subroutine: ship X + 1 as a 9-bit number, stops at MAX_X
+        lda SPR_XHI                 ; bit 0 = bit 8 of the ship X
+        and #%00000001              ; keep only that bit
+        beq .move                   ; X is below 256, the right edge is far away
+        lda SPR0_X                  ; low byte (X = 256 + low byte)
+        cmp #MAX_X - 256            ; at the right edge?
+        beq .done                   ; yes, don't move
+.move
+        inc SPR0_X                  ; low byte + 1
+        bne .done                   ; it did not wrap around to 0, finished
+        lda SPR_XHI                 ; it wrapped: X went from 255 to 256, so set bit 8
+        ora #%00000001              ; set the ship's bit
+        sta SPR_XHI                 ; write it back
+.done
+        rts                         ; return to the caller
+
+!zone enemy_left
+enemy_left                          ; subroutine: enemy X - 1 as a 9-bit number
+        lda SPR1_X                  ; low byte
+        bne .dec                    ; not 0, so no borrow needed
+        lda SPR_XHI                 ; low byte is 0: clear bit 8 (X goes from 256 to 255)
+        and #%11111101              ; the enemy's bit is bit 1
+        sta SPR_XHI                 ; write it back
+.dec
+        dec SPR1_X                  ; low byte - 1
+        rts                         ; return to the caller
+
+!zone enemy_right
+enemy_right                         ; subroutine: enemy X + 1 as a 9-bit number
+        inc SPR1_X                  ; low byte + 1
+        bne .done                   ; did not wrap around to 0
+        lda SPR_XHI                 ; wrapped: X went from 255 to 256, so set bit 8
+        ora #%00000010              ; the enemy's bit is bit 1
+        sta SPR_XHI                 ; write it back
+.done
+        rts                         ; return to the caller
+
+!zone home_enemy
+home_enemy                          ; subroutine: move the enemy one pixel towards the ship (9-bit compare)
+        lda SPR_XHI                 ; bit 0 = ship bit 8, bit 1 = enemy bit 8
+        and #%00000011              ; keep those two
+        cmp #%00000001              ; only the ship is past 255?
+        beq .right                  ; then the enemy is left of it
+        cmp #%00000010              ; only the enemy is past 255?
+        beq .left                   ; then the enemy is right of the ship
+        lda SPR1_X                  ; same bit 8 for both: compare the low bytes, enemy X
+        cmp SPR0_X                  ; compared with the ship X (carry set if enemy X >= ship X)
+        beq .done                   ; same X, nothing to do
+        bcs .left                   ; the enemy is right of the ship
+.right
+        jmp enemy_right             ; move the enemy right (enemy_right returns to our caller)
+.left
+        jmp enemy_left              ; move the enemy left
+.done
         rts                         ; return to the caller
 
 !zone count_dodge                   ; ACME: '.labels' are local to a zone, so each subroutine gets its own
