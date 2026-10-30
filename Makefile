@@ -2,7 +2,7 @@ NAME   = raster-rumble
 SRC    = src/main.asm
 OUT    = build/$(NAME).prg
 
-.PHONY: all clean emu serve test
+.PHONY: all clean emu serve test stop
 
 all: $(OUT)
 
@@ -25,6 +25,10 @@ test: $(OUT) tools/vc64web
 	@curl -s -o /dev/null http://127.0.0.1:8000/ || (python3 tools/serve.py 8000 > /dev/null 2>&1 &)
 	@sleep 1
 	open "http://127.0.0.1:8000/#openROMS=true"
+
+# stop the server that make test left running in the background
+stop:
+	@pkill -f tools/serve.py && echo "server stopped" || echo "no server running"
 
 clean:
 	rm -rf build

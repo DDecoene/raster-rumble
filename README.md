@@ -26,6 +26,7 @@ The game runs in the vc64web browser emulator:
 
     make test      # builds, starts a local server and opens the game in your browser
     make serve     # only the server, on http://127.0.0.1:8000 (Ctrl-C stops it)
+    make stop      # stops the server that make test leaves running in the background
 
 The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and a small loader that the server adds to the page fetches it from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also changes the emulator a little as it serves it: it adds a loader that fetches the newest build once the emulator runs (the emulator's own load-from-address feature did not work in every browser), and it replaces the offline cache that would keep serving an old build.
 
