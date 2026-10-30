@@ -170,6 +170,7 @@ frame                               ; the game loop, runs once per screen refres
         jsr update_stars            ; scroll the starfield down
         jsr update_music            ; play the next note when it is time
 
+        jsr cia_inputs              ; the ports must be inputs every time (an emulator was seen to change port B)
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
         sta joy                     ; keep a copy, because we shift it bit by bit
 !if SHOW_JOY = 1 {

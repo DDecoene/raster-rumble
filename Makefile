@@ -24,7 +24,7 @@ serve: $(OUT) tools/vc64web
 test: $(OUT) tools/vc64web
 	@curl -s -o /dev/null http://127.0.0.1:8000/ || (python3 tools/serve.py 8000 > /dev/null 2>&1 &)
 	@sleep 1
-	open "http://127.0.0.1:8000/#openROMS=true#http://127.0.0.1:8000/game/$(NAME).prg"
+	open "http://127.0.0.1:8000/#openROMS=true"
 
 clean:
 	rm -rf build

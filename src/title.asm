@@ -93,6 +93,7 @@ draw_title                          ; subroutine: write the three text lines and
 
 !zone any_key
 any_key                             ; subroutine: carry set = a key or a joystick-2 direction/fire is pressed
+        jsr cia_inputs              ; make sure both ports are inputs, see below
         lda CIA1_PORTA              ; joystick port 2: all 1 = nothing pressed
         cmp #$ff                    ; anything pulled low?
         bne .yes                    ; yes: a direction or fire
@@ -126,4 +127,14 @@ wait_frame                          ; subroutine: return once per screen refresh
         bne -                       ; no, keep checking
 -       cmp VIC_RASTER              ; yes, now wait until the beam has left that line
         beq -                       ; still on it, keep waiting
+        rts                         ; return to the caller
+
+!zone cia_inputs
+cia_inputs                          ; subroutine: both CIA 1 ports as inputs with their latches high, like at startup
+        lda #$ff                    ; all bits 1
+        sta CIA1_PORTA              ; port A latch high (nothing selected)
+        sta CIA1_PORTB              ; port B latch high
+        lda #$00                    ; 0 = every pin is an input
+        sta CIA1_DDRA               ; port A all inputs, so only the joystick can pull a line low
+        sta CIA1_DDRB               ; port B all inputs, so a held key cannot pull a joystick line low
         rts                         ; return to the caller

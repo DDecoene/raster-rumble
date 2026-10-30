@@ -27,7 +27,7 @@ The game runs in the vc64web browser emulator:
     make test      # builds, starts a local server and opens the game in your browser
     make serve     # only the server, on http://127.0.0.1:8000 (Ctrl-C stops it)
 
-The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and the page loads the game from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also patches two things in the emulator as it serves them: the loader that rewrites `http://` links to `https://`, and the offline cache that would keep serving an old build.
+The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and a small loader that the server adds to the page fetches it from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also changes the emulator a little as it serves it: it adds a loader that fetches the newest build once the emulator runs (the emulator's own load-from-address feature did not work in every browser), and it replaces the offline cache that would keep serving an old build.
 
 ### Joystick readout
 
@@ -67,7 +67,7 @@ Every line of every file is commented. `main.asm` pulls the others in with `!sou
 
 `title_screen` (in `src/title.asm`) runs once at startup, before the first enemy appears. It hides the sprites, then loops once per frame: scroll the stars, play the tune, redraw the three text lines (a star passing over a letter would otherwise leave a hole), and call `any_key`. The title letters cycle through 8 colours and "push any key to start" flashes. `any_key` reports carry set when joystick port 2 has a pin low or any key in the keyboard matrix is down: it briefly drives all 8 keyboard columns low and reads the rows, then puts the CIA ports back as inputs for the game. A press only counts when everything has been quiet for `RELEASE_FRAMES` frames first (so the RUN key from autostart and stray input are ignored) and the key then stays down for `KEY_FRAMES` frames in a row.
 
-Note: this project used to be tested in VICE, which sometimes reported input that nobody pressed (for example joystick down+right, `10101`, or some keyboard rows low), so the game started by itself and directions seemed to stick. That is why a press only counts after a quiet period and a few frames in a row. VICE was dropped and the game is tested in the browser emulator instead.
+Note: emulators can show input that nobody pressed. In VICE the game started by itself or directions seemed to stick (raw bits `10101`), and in the browser emulator it happened too. Two causes were found there: the emulator types its own `run` a few seconds after loading the game, and something changes the data direction of CIA port B (`$dc03` read back as `$0f` instead of 0), which lets the emulated keyboard pull the joystick lines low. So the game sets both CIA ports back to inputs before every read (`cia_inputs`), and a press on the title screen only counts after `RELEASE_FRAMES` frames (5 seconds) without any key, followed by `KEY_FRAMES` frames in a row with a key down.
 
 ### Memory map
 

@@ -52,4 +52,4 @@ TITLE_POS  = SCREEN + TITLE_ROW * 40 + TITLE_COL   ; screen address of the first
 SUB_POS    = SCREEN + SUB_ROW * 40 + SUB_COL
 PROMPT_POS = SCREEN + PROMPT_ROW * 40 + PROMPT_COL
 KEY_FRAMES = 3                      ; a key must be down this many frames in a row to start the game (emulators can give stray bits)
-RELEASE_FRAMES = 150                ; the title waits for this many clean frames in a row (3 seconds) before it accepts a key
+RELEASE_FRAMES = 250                ; the title waits for this many clean frames in a row (5 seconds) before it accepts a key: the emulator types its own RUN keys a few seconds after loading

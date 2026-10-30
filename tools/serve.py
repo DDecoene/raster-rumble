@@ -11,6 +11,26 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EMU = os.path.join(ROOT, "tools", "vc64web")
 BUILD = os.path.join(ROOT, "build")
 
+LOADER = b"""<script>
+(function () {
+  var tries = 0;
+  var timer = setInterval(function () {
+    tries++;
+    if (tries > 120) { clearInterval(timer); return; }                 // give up after a minute
+    if (typeof emulator_currently_runs === 'undefined' || !emulator_currently_runs) return;  // not running yet
+    if (tries < 8) return;                                             // let the emulator's own load go first
+    clearInterval(timer);
+    if (typeof file_slot_file_name !== 'undefined' && file_slot_file_name) return;           // it already loaded a game
+    fetch('/game/raster-rumble.prg', {cache: 'no-store'}).then(function (r) { return r.arrayBuffer(); }).then(function (b) {
+      file_slot_file_name = 'raster-rumble.prg';
+      file_slot_file = new Uint8Array(b);
+      $('#button_eject_zip').click();
+      configure_file_dialog(false);
+    });
+  }, 500);
+})();
+</script>"""
+
 class Handler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
         # /game/x becomes build/x, everything else comes from the emulator folder
@@ -27,6 +47,18 @@ class Handler(SimpleHTTPRequestHandler):
                 body = f.read().replace(b"link.replace('http://', 'https://')", b"link.replace('http://csdb', 'https://csdb')")
             self.send_response(200)
             self.send_header("Content-Type", "text/javascript")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if self.path.split("?", 1)[0] in ("/", "/index.html"):
+            # The emulator can load a game from the address (#http://...) but does it silently and, in some browsers,
+            # not at all. So add a loader of our own: once the emulator runs, fetch the newest build and hand it over,
+            # the same way a dropped file is handled. It does nothing if the emulator already loaded something.
+            with open(os.path.join(EMU, "index.html"), "rb") as f:
+                body = f.read().replace(b"</body>", LOADER + b"</body>")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
