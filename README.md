@@ -22,6 +22,15 @@ Controls: joystick in port 2. In VICE, open Settings > Input > Joystick, set por
 
 F5 starts VICE with its remote debug monitor attached, and every time the debugger talks to VICE the emulator is stopped for a moment. Key presses and releases that arrive then can be lost, which showed up as a stuck joystick direction (for example the raw bits stuck on `10101` or `10001`). For playing, use `make run` in a terminal, or the VS Code task "run in VICE (no debugger)" (Terminal > Run Test Task), and keep F5 for debugging.
 
+### Testing in the browser
+
+VICE sometimes invents input (see the Title screen section), so there is a second way to run the game, in the vc64web browser emulator:
+
+    make test      # builds, starts a local server and opens the game in your browser
+    make serve     # only the server, on http://127.0.0.1:8000 (Ctrl-C stops it)
+
+The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`, and the page loads the game from that address, so there is nothing to upload. After a change, run `make` and reload the page. The script also patches two things in the emulator as it serves them: the loader that rewrites `http://` links to `https://`, and the offline cache that would keep serving an old build. The keyboard works as a joystick in that emulator too. Safari and Chrome both work.
+
 ### If a joystick direction sticks in VICE
 
 Keys sometimes stay "pressed" or seem to be ignored when VICE is played with the keyboard as a joystick. The game reads exactly what VICE gives it, so this is an emulator input problem. What helped, most effective first:
@@ -49,6 +58,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/title.asm         the title screen and the any-key check
     src/data.asm          tables and text (star data, note tables, labels)
     src/sprites.asm       the ship and enemy shapes at $2000
+    tools/serve.py        local server for the browser emulator (make test)
     project-config.json   VS64 project settings (toolkit: acme)
     .vscode/              build task, launch config, VICE path
     Makefile              command-line build
