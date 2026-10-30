@@ -4,7 +4,9 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 ## Tools
 
-    brew install 64tass vice
+    brew install acme vice
+
+Editor: VS Code with the VS64 extension (`code --install-extension rosc.vs64`). It builds with ACME and debugs in VICE: press F5.
 
 ## Build and run
 

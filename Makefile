@@ -1,5 +1,5 @@
 NAME   = raster-rumble
-SRC    = main.asm
+SRC    = src/main.asm
 OUT    = build/$(NAME).prg
 
 .PHONY: all run clean
@@ -8,7 +8,7 @@ all: $(OUT)
 
 $(OUT): $(SRC)
 	@mkdir -p build
-	64tass -C -a -B -l build/$(NAME).lbl -L build/$(NAME).lst $(SRC) -o $@
+	acme -f cbm --cpu 6510 -l build/$(NAME).lbl -r build/$(NAME).rpt -o $@ $(SRC)
 
 run: $(OUT)
 	x64sc -autostart $(OUT)
