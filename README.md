@@ -22,6 +22,18 @@ Controls: joystick in port 2. In VICE, open Settings > Input > Joystick, set por
 
 F5 starts VICE with its remote debug monitor attached, and every time the debugger talks to VICE the emulator is stopped for a moment. Key presses and releases that arrive then can be lost, which showed up as a stuck joystick direction (for example the raw bits stuck on `10101` or `10001`). For playing, use `make run` in a terminal, or the VS Code task "run in VICE (no debugger)" (Terminal > Run Test Task), and keep F5 for debugging.
 
+### If a joystick direction sticks in VICE
+
+Keys sometimes stay "pressed" or seem to be ignored when VICE is played with the keyboard as a joystick. The game reads exactly what VICE gives it, so this is an emulator input problem. What helped, most effective first:
+
+- Use the Mac's built-in speakers or wired headphones. Bluetooth audio makes VICE stall in small hiccups, because it paces the emulation to the sound card, and key presses and releases that arrive during a stall can be lost.
+- Play with `make run` or the "run in VICE (no debugger)" task, not F5.
+- Avoid holding three arrow keys at once, and release keys in the reverse order of pressing them.
+- Tap a stuck key once to clear it.
+- A USB gamepad mapped under Settings > Input > Joystick avoids the keyboard altogether.
+
+To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: the five digits on the top row are up, down, left, right and fire (0 = pressed).
+
 To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu Flash, Ultimate 64 or similar.
 
 ## Project layout
