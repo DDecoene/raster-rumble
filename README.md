@@ -92,11 +92,17 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 | `$07` | `enemy_speed` | pixels per frame the enemy falls |
 | `$08` | `dodge_count` | dodges since the last speed-up |
 | `$09` | `frame_count` | frame counter, slows the homing, drives the sprite animation |
-| `$0a` | `music_timer` | frames left until the next music note |
-| `$0b` | `music_step` | which of the 32 notes plays next |
+| `$0a` | `music_timer` | ticks left until the next step of the tune |
+| `$0b` | `music_step` | which of the 64 steps (16th notes) plays next |
 | `$1e` | `rnd` | random number generator state (never 0) |
-| `$1f` | `drum_slide` | frame of the kick drum (1 to `KICK_LEN`), 0 = no kick playing |
-| `$1d` | `sfx_timer` | frames left in which a sound effect owns voice 1 (the bass waits) |
+| `$1f` | `drum_idx` | tick of the playing drum (1 to `DRUM_LEN`), 0 = no drum playing |
+| `$20` | `drum_base` | where the playing drum starts in the drum tables |
+| `$1d` | `sfx_timer` | frames left in which a sound effect owns voice 3 (the drums wait) |
+| `$21` | `dodge_flash` | frames left of the glow after a dodge |
+| `$29`-`$2d`, `$2f` | `plasma_ph1`-`plasma_ph3`, `plasma_row`, `plasma_rowv`, `plasma_cnt` | the plasma: phases, next row, the vertical wave value, row counter for `plasma_init` |
+| `$22`-`$24` | `band1`-`band3` | `$d016` value of each parallax band |
+| `$25` | `exp_timer` | frames left of the explosion (0 = none) |
+| `$26`-`$28` | `shake_x`, `shake_y`, `fx_tmp` | this frame's shake and a scratch byte |
 | `$0c` | `key_count` | title screen: frames in a row with a key down (needs `KEY_FRAMES`) |
 | `$0e` | `lives` | lives left, 0 = game over |
 | `$0f` | `title_mode` | 0 = title screen, 1 = game over screen |
@@ -110,9 +116,11 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 
 ### Sound
 
-- Voice 1: sound effects, a short triangle blip for each dodge and a noise explosion on a hit. Each one sets its own pitch and envelope, then retriggers the voice by switching the gate off and on. Between effects it plays a sawtooth bass: the root of the current chord (`bass_lo`, `bass_hi`) on every 4th note. An effect sets `sfx_timer` (`$1d`, `SFX_FRAMES` frames) and the bass waits until it has run out, so it never cuts an effect short. Each bass note sets its own envelope and waveform again, which also undoes what the last effect left behind.
+- Voice 1: only the bass, a sawtooth: the root of the current chord (`bass_lo`, `bass_hi`) on steps 0 and 8 of each chord, started by `bass_start`. Nothing else uses this voice, so the bass and the arpeggio never drop out.
 - Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked pulse wave (decay 6, short). Every frame `update_music` also moves the pulse width (a sine, 4 to 11) and the filter cutoff (`$d416`, a slow sine from 24 to 87, one turn per 256 frames) with a resonant low-pass filter on this voice only, which gives the synth sound. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
-- Voice 3: the drums. The tune has 8 notes per bar and `drum_pat` gives one drum for each (0 none, 1 kick, 2 snare, 3 hat): kick, -, -, hat, kick, kick, -, - (no snare for now: the user did not like it, code 2 has table entries but is not in the pattern). Every drum starts with noise (`drum_wave`; noise must never be combined with another waveform, that locks the noise generator and goes silent); `drum_ad` and `drum_fhi` give the envelope and the noise pitch. The kick turns into a triangle wave after one frame and its 16 bit pitch then follows the `kick_freq_hi`/`kick_freq_lo` tables, one entry per frame (`drum_slide`, `$1f`, is the frame it is on): a click at about 1.4 kHz, a jump to 360 Hz, then 60 Hz for the thump (a sub bass lower than that is not heard on laptop speakers). The pitch table came from the user. The tables have 7 entries because the next drum comes 7 frames later and cuts the kick off. The snare (not used) is a mid pitch noise, the hat a short high one.
+- Double speed: the tune runs at 100 Hz. `music_tick` is called twice per frame (game: inside `game_bars`, at raster line 54 and line 210; title: inside `raster_show`, at line 54 and after the bars), `update_music` once (synth sweeps, `sfx_timer`). A step is `MUSIC_TICKS` (7) ticks, a 16th note; the arpeggio plays on even steps, the bass on steps 0 and 8 of a chord, drums on any step (`drum_pat`, 16 per bar).
+- Hard restart: one tick before a note the voice gets gate off and AD/SR 0, so the envelope is empty when the note starts (avoids the SID ADSR bug). Voice 2 does it for every note, the bass for its notes (unless an effect owns voice 1), the drum voice before each drum (this also stops the old drum's table).
+- Voice 3: the drums, and the sound effects (a short triangle blip for each dodge, a noise explosion on a hit, set up in `main.asm`). An effect sets `sfx_timer` (`$1d`, `SFX_BLIP` or `SFX_FRAMES` frames) and stops the drum table; until it runs out no new drum starts, so the effect is never cut short. Only a few drum hits are lost, the melody stays. Voice 3 is table driven for the drums. `drum_pat` gives one drum per step (0 none, 1 kick, 2 snare, 3 hat): kick on 0, 8, 10, hat on 6 and 14 (no snare: the user did not like it; its table is there). Each drum has `DRUM_LEN` (14) entries per table, one per tick: `drum_fhi`/`drum_flo` the pitch and `drum_ctrl` a new waveform with gate on (0 = keep). `drum_ad` is the envelope. Noise must never be combined with another waveform (it locks and goes silent). The kick: 2 ticks of noise click at 1.4 kHz, then a triangle falling from 366 Hz to 60 Hz in 5 ticks (the shape came from the user, now at 100 Hz resolution). The hat is high noise rising a little, the snare noise that gets darker.
 
 ### Joystick and the keyboard
 
@@ -145,7 +153,7 @@ These constants in `src/config.asm` change the difficulty without touching the l
 - `DODGES_PER_LEVEL`: dodges needed per speed-up.
 - `LIVES`: lives per game. `OVER_WAIT`: frames the game over screen ignores keys.
 - `HIT_FRAMES`: how long the border flashes after a hit.
-- `MUSIC_FRAMES`: frames per music note, higher is slower.
+- `MUSIC_TICKS`: ticks per step of the tune (a tick is 10 ms), higher is slower.
 - `STARS`: number of stars (the speed and colour tables repeat every 3).
 - Homing rate: the `and #%00000001` before the homing code, in `src/main.asm`. Use `#%00000011` for slower homing.
 
@@ -163,3 +171,10 @@ These constants in `src/config.asm` change the difficulty without touching the l
 - Save the high score to disk now that there is a title screen.
 - More enemies at once (sprites 2-7 are free).
 - A title tune.
+
+
+### Game effects (src/effects.asm, game_bars in src/demo.asm)
+
+- **Plasma behind the playfield.** A real 2D text mode plasma in dark blue, in the 24 rows under the score, drawn in extended colour mode (ECM, bit 6 of `$d011`): every cell has its own background colour, picked by bits 6 and 7 of its screen code from `$d021` (black) and `$d022` (the plasma colour, `VIC_BG1`). That is also why stars can sit on the plasma without a black box around them: a star gets the background bits of the cell it is in. ECM only has 64 characters, so the star shapes live at screen codes 33 to 40 (`STAR_CHAR`) and the two dither patterns at 41 (sparse) and 42 (checkerboard); the title screens do not use those codes. The value of a cell is the sum of three sine waves, as in the classic plasma: a horizontal one per column (`PLASMA_COLX`, once per frame in `plasma_prep`), a vertical one per row (`plasma_rowv`, once per row) and a diagonal one (`dtab`, period 32, read at x + row + phase). The sum (0 to 189) picks a screen code from `plasma_code` (black, sparse dots, checkerboard, or the plasma colour as background) and a colour for the dots from `plasma_ramp`; below 110 it is black, so only the peaks show. The inner loop of `plasma_step` patches its own addresses (self-modifying code) per row. `game_bars` colours 4 rows per frame between the music ticks and scroll bands, so the whole plasma is renewed every 6 frames. A star remembers the code and colour that were in its cell (`star_ucode`, `star_ucol`) and puts them back when it moves on; `plasma_step` redraws the stars of its row. A star inside a dithered cell gets a plain cell (one background colour per cell). `plasma_init` colours all rows at once after the title and game over screens and switches ECM on; `reset_scroll` switches it off for those screens. Moods: nebula, fire during an explosion, a glow just after a dodge (`ramp_lo`/`ramp_hi`, `mood_bg1`). To make it dimmer, raise the 110, 125, 140, 160 thresholds in `plasma_code` and `plasma_ramp` (`data.asm`).
+- **Explosion.** On a hit `start_explosion` launches 6 sprites (2 to 7, a round dot at `$2100`) from the enemy in a star shape. `update_particles` moves them (9-bit X in `PART_LO`/`PART_HI` at `$c600`, switches a sprite off when it leaves the screen) and cycles white, yellow, orange, red. For `EXP_FRAMES` (28) frames the screen shakes: `update_bands` writes a random vertical scroll to `$d011` (below the playfield, where the VIC does not mind) and adds a random horizontal shake to the bands, with `shake_mask` making it smaller as the explosion ages. While `exp_timer` runs no new hit counts (the particles also set the sprite collision bits), a short grace period.
+- **Parallax bands.** The playfield is split in three bands (rows 1 to 6, 7 to 14, 15 to 24; the score row never moves). Each band has its own horizontal fine scroll (`$d016`, `band1` to `band3`, set at lines `BAND1_LINE` to `BAND3_LINE` by `game_bars`), 0 to 2, 0 to 4 and 0 to 7 pixels, from the ship X (`par_far`, `par_mid`, `par_near`): the stars lean the other way when you fly, the near ones most.

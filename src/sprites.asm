@@ -99,3 +99,19 @@ enemy_data_b                        ; enemy frame B at $20c0 = 131 * 64 (spikes 
         !byte %00000000, %00000000, %00000000   ; 20 ............
         !byte %00000000, %00000000, %00000000   ; 21 ............
         !byte 0                     ; padding, sprite blocks are 64 bytes (63 used)
+
+!if * != $2100 {
+    !error "the particle shape must sit at $2100 (pointer 132)"
+}
+particle_data                       ; the burst particle at $2100 = 132 * 64: a round dot of 8 x 8 pixels in the middle of a hi-res sprite
+!fill 7 * 3, 0                      ; 7 empty rows
+        !byte 0, %00111100, 0
+        !byte 0, %01111110, 0
+        !byte 0, %11111111, 0
+        !byte 0, %11111111, 0
+        !byte 0, %11111111, 0
+        !byte 0, %11111111, 0
+        !byte 0, %01111110, 0
+        !byte 0, %00111100, 0
+!fill 6 * 3, 0                      ; 6 empty rows
+        !byte 0                     ; padding

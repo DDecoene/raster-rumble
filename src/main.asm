@@ -10,6 +10,7 @@
 ;   src/music.asm      the tune on SID voice 2
 ;   src/title.asm      the title and game over screens and the any-key check
 ;   src/demo.asm       the demo effects of those screens: raster bars, bouncing letters, scroller
+;   src/effects.asm    the game's demo effects: explosion burst, shake, parallax bands
 ;   src/data.asm       tables and text
 ;   src/sprites.asm    the ship and enemy shapes at $2000
 ;
@@ -76,10 +77,14 @@ start
         lda #200                    ; start Y: near the bottom
         sta SPR0_Y                  ; set ship Y
 
+        lda #0
+        sta exp_timer               ; no explosion and no flash yet
+        sta dodge_flash
+
         lda #$a7                    ; any value but 0: the random number generator starts here
         sta rnd
         lda #0                      ; voice 3 is the drum voice (see music.asm), no sound yet
-        sta drum_slide              ; the kick pitch is not sliding
+        sta drum_idx                ; no drum is playing
         sta SID_FREQ3L              ; frequency low byte (the drums only set the high byte)
 
         lda #%00011111              ; volume 15 (max), bit 4 = low-pass filter, bit 7 = 0: voice 3 is not muted
@@ -103,7 +108,7 @@ start
         sta SID_PW2L                ; pulse width low byte
         lda #$08                    ; high nibble 8
         sta SID_PW2H                ; pulse width high byte
-        lda #1                      ; play the first note on the next frame
+        lda #1                      ; play the first step on the next tick
         sta music_timer             ; counts down to 0
         lda #0                      ; A = 0
         sta music_step              ; start the tune at note 0
@@ -161,6 +166,7 @@ start
         jsr reset_lives             ; full lives and draw them
         jsr reset_difficulty        ; enemy starts at its slowest speed
         jsr title_screen            ; wait on the title until a key is pressed (it also switches the sprites on)
+        jsr plasma_init             ; the playfield becomes a plasma: solid blocks that are coloured by colour RAM
         jsr spawn_enemy             ; put the enemy at the top at a random X
         lda SPR_COLL               ; read the collision register once to clear leftovers
 
@@ -171,6 +177,8 @@ frame                               ; the game loop, runs once per screen refres
 -       cmp VIC_RASTER              ; yes, now wait until the beam has left that line
         beq -                       ; still on it, keep waiting (so we only run once per frame)
 
+        lda #%11001000              ; no fine scroll for the score row and the bottom (game_bars sets the bands)
+        sta VIC_CTRL2
         inc frame_count             ; one more frame has passed
 
         lda frame_count             ; animation: switch frame every 8 frames
@@ -185,7 +193,7 @@ frame                               ; the game loop, runs once per screen refres
         sta SPRITE1_PTR             ; enemy shape for this frame
 
         jsr update_stars            ; scroll the starfield down
-        jsr update_music            ; play the next note when it is time
+        jsr update_music            ; the synth sweeps (once per frame; the tune itself ticks inside game_bars, twice a frame)
 
         jsr cia_inputs              ; the ports must be inputs every time (an emulator was seen to change port B)
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
@@ -235,19 +243,23 @@ frame                               ; the game loop, runs once per screen refres
         jsr add_score               ; the enemy got past us: +1 point
         jsr update_hiscore          ; if that beat the high score, it becomes the new one
         lda #$03                    ; attack 0, decay 3: a short blip
-        sta SID_AD1                 ; voice 1 envelope
-        lda #$00                    ; sustain 0 (the bass leaves it at 6, which would hold the blip), release 0
-        sta SID_SR1                 ; voice 1 envelope part 2
-        lda #$00                    ; the bass may have left a low byte behind
-        sta SID_FREQ1L              ; voice 1 frequency, low byte
+        sta SID_AD3                 ; voice 3 envelope
+        lda #$00                    ; sustain 0 , release 0
+        sta SID_SR3                 ; voice 3 envelope part 2
+        lda #$00                    ; a drum may have left a low byte behind
+        sta SID_FREQ3L              ; voice 3 frequency, low byte
         lda #$50                    ; a high pitch
-        sta SID_FREQ1H              ; voice 1 frequency
+        sta SID_FREQ3H              ; voice 3 frequency
         lda #%00010000              ; triangle waveform, gate off (resets the envelope)
-        sta SID_CTRL1               ; voice 1 stops
+        sta SID_CTRL3               ; voice 3 stops
         lda #%00010001              ; triangle waveform, gate on
-        sta SID_CTRL1               ; gate 0 to 1 starts the blip
-        lda #SFX_FRAMES             ; the bass keeps quiet for a moment
+        sta SID_CTRL3               ; gate 0 to 1 starts the blip
+        lda #0
+        sta drum_idx                ; the drum that was playing stops (its table must not touch the voice)
+        lda #SFX_BLIP               ; the drums keep quiet for a moment
         sta sfx_timer
+        lda #DODGE_FLASH            ; the bars flash gold
+        sta dodge_flash
         jsr count_dodge             ; every 10 dodges the enemy speeds up
         jsr spawn_enemy             ; respawn it at the top
 +
@@ -255,24 +267,29 @@ frame                               ; the game loop, runs once per screen refres
         and #%00000011              ; keep only the bits of the ship and the enemy
         cmp #%00000011              ; are both set, so do they overlap?
         bne +                       ; no, no hit
+        lda exp_timer               ; the burst sprites touch the ship too: while an explosion runs no new hit counts
+        bne +
         lda #COLOR_RED              ; hit! red
         sta VIC_BORDER              ; flash the border
         lda #HIT_FRAMES             ; how long to flash
         sta hit_timer               ; start the flash timer
         lda #$09                    ; decay 9: the long rumble (the dodge blip uses a shorter one)
-        sta SID_AD1                 ; voice 1 envelope
-        lda #$00                    ; sustain 0 (the bass leaves it at 6), release 0
-        sta SID_SR1                 ; voice 1 envelope part 2
-        lda #$00                    ; the bass may have left a low byte behind
-        sta SID_FREQ1L              ; voice 1 frequency, low byte
+        sta SID_AD3                 ; voice 3 envelope
+        lda #$00                    ; sustain 0 , release 0
+        sta SID_SR3                 ; voice 3 envelope part 2
+        lda #$00                    ; a drum may have left a low byte behind
+        sta SID_FREQ3L              ; voice 3 frequency, low byte
         lda #$08                    ; low pitch for a crunchy noise
-        sta SID_FREQ1H              ; voice 1 frequency
+        sta SID_FREQ3H              ; voice 3 frequency
         lda #%10000000              ; noise waveform, gate off (this resets the envelope)
-        sta SID_CTRL1               ; voice 1 stops
+        sta SID_CTRL3               ; voice 3 stops
         lda #%10000001              ; noise waveform, gate on
-        sta SID_CTRL1               ; gate 0 to 1 starts the explosion sound
-        lda #SFX_FRAMES             ; the bass keeps quiet for a moment
+        sta SID_CTRL3               ; gate 0 to 1 starts the explosion sound
+        lda #0
+        sta drum_idx                ; the drum that was playing stops
+        lda #SFX_FRAMES             ; the drums keep quiet for a moment
         sta sfx_timer
+        jsr start_explosion         ; a burst of sprites from the enemy, shake and fire bars
         dec lives                   ; a hit costs a life (the score and the speed stay)
         jsr draw_lives              ; show it
         lda lives                   ; any left?
@@ -280,7 +297,9 @@ frame                               ; the game loop, runs once per screen refres
         lda #$00                    ; no, game over: black
         sta VIC_BORDER              ; stop the flash
         sta hit_timer               ; ... for good
+        jsr reset_scroll            ; no shake, no explosion on the other screen
         jsr game_over               ; show it until a key is pressed (the high score stays)
+        jsr plasma_init             ; and the plasma comes back
         jsr reset_score             ; new game: score = 000
         jsr reset_lives             ; ... full lives
         jsr reset_difficulty        ; ... and the enemy is slow again
@@ -296,6 +315,10 @@ life_left
         lda #$00                    ; timer just ran out, black
         sta VIC_BORDER              ; border back to normal
 +
+        jsr update_particles        ; move the burst of an explosion
+        jsr update_bands            ; the shake and the scroll of the three bands, from the ship position
+        jsr plasma_prep             ; the phases and the horizontal wave of the plasma for this frame
+        jsr game_bars               ; the music ticks, the scroll bands and 4 rows of the plasma (this waits for the next frame)
         jmp frame                   ; back to the top for the next frame
 
 ; The rest of the program. The order here is the order in memory: code first, then data, then sprites.
@@ -305,5 +328,6 @@ life_left
         !source "src/music.asm"     ; the tune
         !source "src/title.asm"     ; the title screen and the any-key check
         !source "src/demo.asm"      ; raster bars, bouncing letters, scroller
+        !source "src/effects.asm"   ; explosion burst, shake, parallax bands of the game
         !source "src/data.asm"      ; tables and text
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000

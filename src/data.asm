@@ -6,6 +6,8 @@ star_hi   !fill STARS, 0            ; screen address, high byte
 star_sub  !fill STARS, 0            ; pixel row inside the cell (0-7), picks the star shape
 star_spd  !fill STARS, 0            ; pixels per frame
 star_col  !fill STARS, 0            ; colour
+star_ucode !fill STARS, 0           ; the screen code that was in the star's cell before the star came (put back when it leaves)
+star_ucol  !fill STARS, 0           ; ... and its colour
 speed_table  !byte 1, 2, 3          ; far, middle and near stars
 colour_table !byte COLOR_DGREY, COLOR_LGREY, COLOR_WHITE
 
@@ -26,18 +28,24 @@ bass_lo                             ; the root of each chord, one or two octaves
 bass_hi
         !byte $03, $02, $04, $03
 
-drum_pat                            ; the drum for each of the 8 notes of a bar: 0 none, 1 kick, 2 snare, 3 hat
-        !byte 1, 0, 0, 3, 1, 1, 0, 0     ; no snare (2): the entries for it stay in the tables below
-drum_wave                           ; waveform of the first frame (without the gate): noise for all three. The kick turns into a triangle
-        !byte %10000000, %10000000, %10000000 ; later. (Noise combined with another waveform locks the noise: silence.)
+drum_pat                            ; the drum for each of the 16 steps of a bar (a 16th note each): 0 none, 1 kick, 2 snare, 3 hat
+        !byte 1, 0, 0, 0, 0, 0, 3, 0, 1, 0, 1, 0, 0, 0, 3, 0 ; kick on 0, 8 and 10, hat on 6 and 14 (no snare: not used for now)
 drum_ad                             ; attack and decay: the kick has a long tail (the next drum cuts it off), the snare is shorter, the hat very short
         !byte $09, $05, $01
-drum_fhi                            ; start pitch (frequency high byte): the kick click, the noise of the snare and of the hat
-        !byte $60, $28, $a0
-kick_freq_hi                        ; the pitch of the kick on each frame after the hit: from 360 Hz in one jump down to 60 Hz,
-        !byte $18, $05, $04, $04, $04, $04, $04 ; where it stays for the thump. Only 7 frames (MUSIC_FRAMES): the next drum cuts it off
-kick_freq_lo
-        !byte $00, $00, $00, $00, $00, $00, $00
+drum_start                          ; where each drum begins in the three tables below: DRUM_LEN (14) entries per drum, one per tick
+        !byte 0, DRUM_LEN, 2 * DRUM_LEN
+; The drum tables. Every tick of a drum sets the pitch (high and low byte) and, when drum_ctrl is not 0, the waveform with the gate on.
+; Noise must never be combined with another waveform: that locks the noise generator and the voice goes silent.
+drum_ctrl
+        !byte $81, 0, $11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0     ; kick: noise click for 2 ticks, then a triangle
+        !byte $81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       ; snare: noise all the way
+        !byte $81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       ; hat: noise all the way
+drum_fhi
+        !byte $60, $60, $18, $10, $0a, $07, $05, $05, $04, $04, $04, $04, $04, $04 ; kick: click at 1.4 kHz, then falls 366 Hz to 60 Hz in 5 ticks
+        !byte $28, $24, $20, $1c, $18, $18, $14, $14, $10, $10, $10, $10, $10, $10 ; snare: noise that gets darker
+        !byte $a0, $b0, $b8, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0 ; hat: high noise, rising a little
+drum_flo
+        !fill 3 * DRUM_LEN, 0       ; low bytes: all 0
 
 score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
@@ -88,3 +96,119 @@ over_scroll
         !scr "      you ran out of lives ... the high score stays on the screen, so beat it ... "
         !scr "press any key to dive back in ...      "
         !byte $ff                   ; end marker
+
+; Game effects tables
+burst_dx                            ; the 6 burst particles fly out in a star: sideways speed (signed) ...
+        !byte 4, 2, -2, -4, -2, 2
+burst_dy                            ; ... and vertical speed
+        !byte 0, 3, 3, 0, -3, -3
+part_cols                           ; the colours the particles cycle through: white yellow orange red
+        !byte 1, 7, 8, 2
+bit_tab                             ; the bit of sprite 2 to 7 in $d015 and $d010
+        !byte %00000100, %00001000, %00010000, %00100000, %01000000, %10000000
+nbit_tab                            ; the same, inverted
+        !byte %11111011, %11110111, %11101111, %11011111, %10111111, %01111111
+shake_mask                          ; shake size by explosion age (exp_timer / 4): none at the end, wild at the start
+        !byte 0, 1, 1, 3, 3, 3, 7, 7
+; Parallax: how far each band shifts for a ship X / 8 of 0 to 40 (far stars little, near stars a lot, all opposite to the ship)
+par_far
+!for i, 0, 40 {
+        !byte int(2 - i * 2 / 40 + 0.5)
+}
+par_mid
+!for i, 0, 40 {
+        !byte int(4 - i * 4 / 40 + 0.5)
+}
+par_near
+!for i, 0, 40 {
+        !byte int(7 - i * 7 / 40 + 0.5)
+}
+
+; The plasma behind the playfield: a dark nebula, drawn in extended colour mode: every cell has its own background colour,
+; picked by bits 6 and 7 of its screen code from $d021 (black) and $d022 (the plasma colour). The three waves add up to 0 to 189
+; and that number picks the screen code (with its background colour), and a colour for the dots of the dither pattern.
+plasma_code                         ; space (black), a sparse or checkerboard pattern on black, then the plasma colour as the background
+!for i, 0, 191 {
+    !if i < 110 {
+        !byte 32                    ; black
+    } else {
+        !if i < 125 {
+            !byte 41                ; sparse dots on black
+        } else {
+            !if i < 140 {
+                !byte 42            ; checkerboard on black
+            } else {
+                !if i < 160 {
+                    !byte 32 + 64   ; the plasma colour as the background (background colour 1)
+                } else {
+                    !byte 41 + 64   ; sparse dots on the plasma colour
+                }
+            }
+        }
+    }
+}
+; Three colour ramps (moods), 192 bytes each: the colour of the dots. The nebula, fire (during an explosion), a glow (after a dodge).
+plasma_ramp
+!for i, 0, 191 {
+    !if i < 110 {
+        !byte 0
+    } else {
+        !if i < 160 {
+            !byte 6                 ; dark blue dots on black
+        } else {
+            !byte 11                ; dark grey dots on the blue
+        }
+    }
+}
+!for i, 0, 191 {
+    !if i < 110 {
+        !byte 0
+    } else {
+        !if i < 160 {
+            !byte 9                 ; brown
+        } else {
+            !byte 8                 ; orange
+        }
+    }
+}
+!for i, 0, 191 {
+    !if i < 110 {
+        !byte 0
+    } else {
+        !if i < 160 {
+            !byte 6
+        } else {
+            !byte 14                ; light blue
+        }
+    }
+}
+mood_bg1                            ; background colour 1 for each mood: dark blue, brown, dark blue
+        !byte 6, 9, 6
+checker                             ; shapes of block 73 and 74
+        !byte $aa, $55, $aa, $55, $aa, $55, $aa, $55
+sparse
+        !byte $88, $00, $22, $00, $88, $00, $22, $00
+ramp_lo
+        !byte <plasma_ramp, <(plasma_ramp + 192), <(plasma_ramp + 384)
+ramp_hi
+        !byte >plasma_ramp, >(plasma_ramp + 192), >(plasma_ramp + 384)
+crow_lo                             ; colour RAM address of each of the 25 rows
+!for r, 0, 24 {
+        !byte <(COLOR_RAM + 40 * r)
+}
+crow_hi
+!for r, 0, 24 {
+        !byte >(COLOR_RAM + 40 * r)
+}
+srow_lo                             ; screen RAM address of each of the 25 rows
+!for r, 0, 24 {
+        !byte <(SCREEN + 40 * r)
+}
+srow_hi
+!for r, 0, 24 {
+        !byte >(SCREEN + 40 * r)
+}
+dtab                                ; the diagonal wave: 32 steps per turn, 128 entries so (x + row + phase) can run on past 64
+!for i, 0, 127 {
+        !byte int(31.5 + 31.5 * sin(i * 3.14159265 / 16))
+}

@@ -17,15 +17,23 @@ setup_charset                       ; subroutine: copy the ROM letters/digits to
         lda CPU_PORT                ; memory configuration again
         ora #%00000100              ; set bit 2: I/O is back at $d000
         sta CPU_PORT                ; done with the ROM
-        ldx #63                     ; clear the 8 shapes (8 bytes each) of screen codes 64-71
+        ldx #63                     ; clear the 8 shapes (8 bytes each) of screen codes 33-40
         lda #0                      ; empty
 .clear
-        sta CHARSET + 512,x         ; shape bytes are 0
+        sta CHARSET + 264,x         ; shape bytes are 0
         dex                         ; previous byte
         bpl .clear                  ; until X goes below 0
+        ldx #7                      ; two block patterns for the plasma, screen codes 41 and 42 (a space, code 32, is the empty one)
+.block
+        lda sparse,x
+        sta CHARSET + 328,x         ; 41: one pixel in four
+        lda checker,x
+        sta CHARSET + 336,x         ; 42: checkerboard
+        dex
+        bpl .block
         lda #%00011000              ; a 2 pixel wide dot in the middle of the 8 pixels
 !for k, 0, 7 {
-        sta CHARSET + 512 + 9 * k   ; star shape k: the dot sits in pixel row k (8 bytes per shape + k)
+        sta CHARSET + 264 + 9 * k   ; star shape k: the dot sits in pixel row k (8 bytes per shape + k)
 }
         lda #$1a                    ; screen memory at $0400 (high nibble 1), characters at $2800 (5 * $800)
         sta VIC_MEMCTL              ; the VIC now reads our charset
@@ -64,23 +72,51 @@ setup_stars                         ; subroutine: stars on rows 1, 3, 5 ... 23, 
         sta star_spd,x              ; store the speed
         lda colour_table,y          ; far (slow) stars are dark, near (fast) stars bright
         sta star_col,x              ; store the colour
+        lda #$20                    ; nothing under the star yet: a space, colour black
+        sta star_ucode,x
+        lda #0
+        sta star_ucol,x
         lda #0                      ; sub-pixel position 0
         sta star_sub,x              ; start at the top of its cell
         dex                         ; next star
         bpl .next                   ; until X goes below 0
         rts                         ; return to the caller
 
+!zone reset_star_under
+reset_star_under                    ; subroutine: forget what is under the stars (the title screens are blank: spaces)
+        ldx #STARS - 1
+        lda #$20
+.r
+        sta star_ucode,x
+        dex
+        bpl .r
+        ldx #STARS - 1
+        lda #0
+.c
+        sta star_ucol,x
+        dex
+        bpl .c
+        rts                         ; return to the caller
+
 !zone update_stars
-update_stars                        ; subroutine: erase every star, move it down, draw it again
+update_stars                        ; subroutine: put back what was under every star, move it down, draw it again on top of what is there now
         ldx #STARS - 1              ; star number, counting down
 .loop
         lda star_lo,x               ; screen address of this star, low byte
         sta star_ptr                ; into the zero page pointer
         lda star_hi,x               ; high byte
         sta star_ptr + 1            ; into the pointer
+        lda star_ptr                ; colour RAM is at screen address + $d400
+        sta star_cptr               ; low byte is the same
+        lda star_ptr + 1
+        clc
+        adc #$d4                    ; $04xx + $d400 = $d8xx
+        sta star_cptr + 1
         ldy #0                      ; (pointer),y with Y = 0 means "the byte the pointer points at"
-        lda #$20                    ; space
-        sta (star_ptr),y            ; erase the star
+        lda star_ucode,x            ; erase the star: put back the character that was under it (the plasma, or a space) ...
+        sta (star_ptr),y
+        lda star_ucol,x             ; ... and its colour
+        sta (star_cptr),y
         lda star_sub,x              ; pixel row inside the cell (0-7)
         clc                         ; clear carry before adding
         adc star_spd,x              ; move down by the star's speed
@@ -115,19 +151,31 @@ update_stars                        ; subroutine: erase every star, move it down
         sta star_lo,x               ; low byte
         lda star_ptr + 1            ; high byte
         sta star_hi,x               ; store it
+        lda star_ptr                ; the colour RAM address of the new cell
+        sta star_cptr
+        lda star_ptr + 1
+        clc
+        adc #$d4
+        sta star_cptr + 1
+        ldy #0
+        lda (star_ptr),y            ; what is in the new cell now (the plasma): keep it, it comes back when the star has moved on ...
+        sta star_ucode,x
+        and #%11000000              ; ... and the star gets the same background colour (bits 6 and 7 of the code, extended colour mode)
+        sta star_bg
+        lda (star_cptr),y
+        and #$0f
+        sta star_ucol,x
         lda star_sub,x              ; the pixel row decides which of the 8 shapes to use
-        ora #STAR_CHAR              ; screen code 64 + row
+        clc
+        adc #STAR_CHAR              ; screen code 33 + row
+        ora star_bg                 ; plus the background colour of the cell
         sta (star_ptr),y            ; draw the star
-        lda star_ptr                ; colour RAM is at screen address + $d400
-        sta star_cptr               ; low byte is the same
-        lda star_ptr + 1            ; high byte
-        clc                         ; clear carry
-        adc #$d4                    ; $04xx + $d400 = $d8xx
-        sta star_cptr + 1           ; high byte
         lda star_col,x              ; this star's colour
         sta (star_cptr),y           ; colour the star
         dex                         ; next star
-        bpl .loop                   ; until X goes below 0
+        bmi .done                   ; below 0: all stars done
+        jmp .loop                   ; (the loop is too long for a branch)
+.done
         rts                         ; return to the caller
 
 !zone random_byte

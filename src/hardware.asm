@@ -56,3 +56,9 @@ SID_PW2H   = $d40a                  ; SID voice 2 pulse width, high nibble ($08 
 SID_CTRL2  = $d40b                  ; SID voice 2 control (bit 6 = pulse wave, bit 0 = gate)
 SID_AD2    = $d40c                  ; SID voice 2 attack and decay
 SID_SR2    = $d40d                  ; SID voice 2 sustain and release
+VIC_CTRL1  = $d011                  ; bits 0-2: vertical fine scroll (0-7 lines, 3 = normal), bit 3: 1 = 25 rows, bit 4: screen on
+SPR2_X     = $d004                  ; sprite 2 X (low 8 bits); sprite n is at $d000 + 2 * n, its Y is the next register
+SPR2_Y     = $d005                  ; sprite 2 Y
+SPR2_COLOR = $d029                  ; sprite 2 colour, sprites 3 to 7 follow
+SPRITE2_PTR = $07fa                 ; sprite 2 data pointer, sprites 3 to 7 follow
+VIC_BG1    = $d022                  ; extended colour mode: background colour 1 (the plasma's main colour). Background colour 0 is $d021, always black

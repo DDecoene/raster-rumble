@@ -35,6 +35,17 @@ game_over                           ; subroutine: show "game over" until a key o
         lda #RELEASE_FRAMES - OVER_WAIT ; a short wait only, the player was just playing
         sta clean_count             ; (a key held from the game must still be released first)
 .start
+        jsr reset_star_under        ; the stars forget what was under them (the plasma): these screens are blank
+        lda #$20                    ; clear the playfield (rows 1 to 24): a space everywhere, so no plasma is left on the game over screen
+        ldx #0
+.clear
+        sta SCREEN + 40,x           ; four runs of 240 characters
+        sta SCREEN + 280,x
+        sta SCREEN + 520,x
+        sta SCREEN + 760,x
+        inx
+        cpx #240
+        bne .clear
         lda #0                      ; A = 0
         sta SPR_ENABLE              ; hide the ship and the enemy while the text shows
         sta key_count               ; no frames with a key down yet
@@ -46,7 +57,7 @@ game_over                           ; subroutine: show "game over" until a key o
         jsr raster_show             ; the colour bars and the scroller split: this also waits for the next frame
         inc frame_count             ; one more frame has passed (the stars and the colours use it)
         jsr update_stars            ; the stars keep scrolling behind the title
-        jsr update_music            ; and the tune keeps playing
+        jsr update_music            ; and the synth keeps sweeping (the tune itself ticks inside raster_show, twice a frame)
         jsr draw_title              ; draw the text on top of any star that crossed it
         jsr scroll_step             ; move the scroller 2 pixels
         lda clean_count             ; the first RELEASE_FRAMES frames only count time, whatever is pressed: ...
