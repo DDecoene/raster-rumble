@@ -33,8 +33,9 @@ SID_RES     = $d417                  ; SID filter resonance (high nibble) and wh
 SID_VOLUME = $d418                  ; SID master volume (low nibble), bit 7 = mute voice 3
 SID_FREQ3L = $d40e                  ; SID voice 3 frequency, low byte
 SID_FREQ3H = $d40f                  ; SID voice 3 frequency, high byte
-SID_CTRL3  = $d412                  ; SID voice 3 control (bit 7 = noise waveform)
-SID_OSC3   = $d41b                  ; SID voice 3 oscillator output, with noise this is a random byte
+SID_CTRL3  = $d412                  ; SID voice 3 control (bit 7 = noise, bit 4 = triangle, bit 0 = gate)
+SID_AD3    = $d413                  ; SID voice 3 attack and decay
+SID_SR3    = $d414                  ; SID voice 3 sustain and release
 COLOR_RED   = 2                     ; C64 colour number for red
 COLOR_ORANGE = 8                    ; C64 colour number for orange
 COLOR_YELLOW = 7                    ; C64 colour number for yellow

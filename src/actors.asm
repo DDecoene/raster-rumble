@@ -18,7 +18,7 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         rol xhi                     ; (carry into the high byte again)
         asl xlo                     ; times 8
         rol xhi                     ; (and again)
-        lda SID_OSC3                ; random byte
+        jsr random_byte             ; random byte
         and #%00000111              ; 0 to 7: a random pixel inside the column
         clc                         ; clear carry before adding
         adc xlo                     ; add it to the low byte

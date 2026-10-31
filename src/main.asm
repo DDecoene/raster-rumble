@@ -76,13 +76,13 @@ start
         lda #200                    ; start Y: near the bottom
         sta SPR0_Y                  ; set ship Y
 
-        lda #$ff                    ; maximum frequency, so the noise changes quickly
-        sta SID_FREQ3L              ; SID voice 3 frequency low byte
-        sta SID_FREQ3H              ; SID voice 3 frequency high byte
-        lda #%10000000              ; bit 7 = noise waveform (gate stays off, we only read it)
-        sta SID_CTRL3               ; start voice 3 as a random number generator
+        lda #$a7                    ; any value but 0: the random number generator starts here
+        sta rnd
+        lda #0                      ; voice 3 is the drum voice (see music.asm), no sound yet
+        sta drum_slide              ; the kick pitch is not sliding
+        sta SID_FREQ3L              ; frequency low byte (the drums only set the high byte)
 
-        lda #%10011111              ; volume 15 (max), bit 7 mutes voice 3 so the random noise stays silent, bit 4 = low-pass filter
+        lda #%00011111              ; volume 15 (max), bit 4 = low-pass filter, bit 7 = 0: voice 3 is not muted
         sta SID_VOLUME              ; switch the sound on
         lda #$a2                    ; resonance 10, and voice 2 (bit 1) goes through the filter, the bass and the effects do not
         sta SID_RES                 ; filter setup

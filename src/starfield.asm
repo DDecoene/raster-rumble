@@ -130,9 +130,20 @@ update_stars                        ; subroutine: erase every star, move it down
         bpl .loop                   ; until X goes below 0
         rts                         ; return to the caller
 
+!zone random_byte
+random_byte                         ; subroutine: A = a random byte (only A is changed)
+        lda rnd                     ; the state: an 8 bit shift register with feedback (it visits all 255 values but 0)
+        lsr                         ; shift right, the bit that falls off goes into the carry
+        bcc .store                  ; it was 0: nothing more to do
+        eor #$b8                    ; it was 1: flip the feedback bits
+.store
+        sta rnd                     ; the next state
+        eor VIC_RASTER              ; mix in the raster line, so the answer also depends on when we ask
+        rts                         ; return to the caller
+
 !zone random_column
 random_column                       ; subroutine: A = a random screen column 0-39
-        lda SID_OSC3                ; random byte from the SID noise
+        jsr random_byte             ; random byte
         eor frame_count             ; mix in the frame counter: two reads a few cycles apart are strongly
                                     ; related, and throwing them away and re-reading left the stars bunched left
         eor star_ptr                ; and whatever the star code was working on, for a bit more variety

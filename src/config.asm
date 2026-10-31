@@ -43,6 +43,9 @@ pal_base    = $17                   ; 0 = blue bar colours, 32 = fire bar colour
 col_base    = $18                   ; 0 = title letter colours, 8 = game over letter colours (index into letter_cols)
 row_ptr     = $19                   ; $19 $1a: screen address where the current bouncing letter goes (column of the letter included)
 crow_ptr    = $1b                   ; $1b $1c: the matching colour RAM address
+rnd         = $1e                   ; the state of the random number generator (never 0)
+drum_slide  = $1f                   ; frame of the kick drum, 1 to KICK_LEN (0 = no kick playing)
+KICK_LEN    = 7                     ; frames the kick drum pitch falls (entries of kick_freq_hi)
 sfx_timer   = $1d                   ; frames left in which a sound effect owns voice 1 (the bass waits)
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
 xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr

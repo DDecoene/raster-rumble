@@ -62,7 +62,7 @@ Every line of every file is commented. `main.asm` pulls the others in with `!sou
 - Sprite 0 is the ship, sprite 1 is the enemy. Both are multicolor (12 fat pixels per row, 2 bits each: transparent, own colour, plus orange and yellow shared by both sprites via `$d025`/`$d026`) and have two animation frames. Shapes: ship A `$2000` (pointer 128), enemy A `$2040` (129), ship B `$2080` (130), enemy B `$20c0` (131). The frame switches every 8 frames by bit 3 of `frame_count`. The shapes are drawn as ASCII art in the comments next to each row (`.` transparent, `a` orange, `b` own colour, `c` yellow).
 - The main loop waits for raster line `$fb` once per frame, then picks the animation frame, scrolls the stars, plays the next music note if it is time, reads the joystick, moves the enemy, checks the hardware sprite collision register (`$d01e`) and updates the score. All of that takes about 7% of a PAL frame.
 - Sprite X positions are 9 bits wide: the low 8 bits are in `$d000` (ship) and `$d002` (enemy), bit 8 is in `$d010` (bit 0 = ship, bit 1 = enemy). The visible area is X 24 to 343, so the ship moves between `MIN_X` = 24 and `MAX_X` = 320 (a 24 pixel wide sprite just fits). `ship_left`, `ship_right`, `enemy_left`, `enemy_right` and `home_enemy` do the 9-bit arithmetic: when the low byte wraps, they set or clear bit 8.
-- Random numbers come from SID voice 3 set to noise (`$d41b`). It is muted so it stays silent. The enemy spawns at X = 24 + random column x 8 + 0 to 7 (`spawn_enemy`).
+- Random numbers come from `random_byte` (in `src/starfield.asm`): an 8 bit shift register with feedback in zero page `$1e` (`rnd`), mixed with the raster line. (It used to read the SID voice 3 noise, but voice 3 now plays the drums.) The enemy spawns at X = 24 + random column x 8 + 0 to 7 (`spawn_enemy`).
 - The score is three separate digit bytes (hundreds, tens, ones) in zero page `$04`-`$06`, printed by adding `$30` to each digit.
 
 ### Title screen
@@ -94,6 +94,8 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 | `$09` | `frame_count` | frame counter, slows the homing, drives the sprite animation |
 | `$0a` | `music_timer` | frames left until the next music note |
 | `$0b` | `music_step` | which of the 32 notes plays next |
+| `$1e` | `rnd` | random number generator state (never 0) |
+| `$1f` | `drum_slide` | frame of the kick drum (1 to `KICK_LEN`), 0 = no kick playing |
 | `$1d` | `sfx_timer` | frames left in which a sound effect owns voice 1 (the bass waits) |
 | `$0c` | `key_count` | title screen: frames in a row with a key down (needs `KEY_FRAMES`) |
 | `$0e` | `lives` | lives left, 0 = game over |
@@ -104,13 +106,13 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 
 ### Starfield
 
-12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Stars never touch row 0, which holds the score. Random columns come from `random_column`: the SID noise byte mixed with the frame counter and reduced to 0-39 by subtracting 40 repeatedly. Re-reading the noise register a few cycles after a rejected value gave strongly related values, which bunched all the stars into the left quarter of the screen. `setup_charset`, `setup_stars` and `update_stars` do the work.
+12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Stars never touch row 0, which holds the score. Random columns come from `random_column`: a random byte mixed with the frame counter and reduced to 0-39 by subtracting 40 repeatedly. Re-reading the SID noise register a few cycles after a rejected value (the old source) gave strongly related values, which bunched all the stars into the left quarter of the screen. `setup_charset`, `setup_stars` and `update_stars` do the work.
 
 ### Sound
 
 - Voice 1: sound effects, a short triangle blip for each dodge and a noise explosion on a hit. Each one sets its own pitch and envelope, then retriggers the voice by switching the gate off and on. Between effects it plays a sawtooth bass: the root of the current chord (`bass_lo`, `bass_hi`) on every 4th note. An effect sets `sfx_timer` (`$1d`, `SFX_FRAMES` frames) and the bass waits until it has run out, so it never cuts an effect short. Each bass note sets its own envelope and waveform again, which also undoes what the last effect left behind.
-- Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked pulse wave. Every frame `update_music` also moves the pulse width (a sine, 4 to 11) and the filter cutoff (`$d416`, a slow sine, one turn per 256 frames) with a resonant low-pass filter on this voice only, which gives the synth sound. Voice 3 stays the random number generator. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
-- Voice 3: the muted random number generator.
+- Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked pulse wave (decay 6, short). Every frame `update_music` also moves the pulse width (a sine, 4 to 11) and the filter cutoff (`$d416`, a slow sine from 24 to 87, one turn per 256 frames) with a resonant low-pass filter on this voice only, which gives the synth sound. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
+- Voice 3: the drums. The tune has 8 notes per bar and `drum_pat` gives one drum for each (0 none, 1 kick, 2 snare, 3 hat): kick, -, -, hat, kick, kick, -, - (no snare for now: the user did not like it, code 2 has table entries but is not in the pattern). Every drum starts with noise (`drum_wave`; noise must never be combined with another waveform, that locks the noise generator and goes silent); `drum_ad` and `drum_fhi` give the envelope and the noise pitch. The kick turns into a triangle wave after one frame and its 16 bit pitch then follows the `kick_freq_hi`/`kick_freq_lo` tables, one entry per frame (`drum_slide`, `$1f`, is the frame it is on): a click at about 1.4 kHz, a jump to 360 Hz, then 60 Hz for the thump (a sub bass lower than that is not heard on laptop speakers). The pitch table came from the user. The tables have 7 entries because the next drum comes 7 frames later and cuts the kick off. The snare (not used) is a mid pitch noise, the hat a short high one.
 
 ### Joystick and the keyboard
 
@@ -160,4 +162,4 @@ These constants in `src/config.asm` change the difficulty without touching the l
 
 - Save the high score to disk now that there is a title screen.
 - More enemies at once (sprites 2-7 are free).
-- Drums, and a title tune.
+- A title tune.

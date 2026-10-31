@@ -26,6 +26,19 @@ bass_lo                             ; the root of each chord, one or two octaves
 bass_hi
         !byte $03, $02, $04, $03
 
+drum_pat                            ; the drum for each of the 8 notes of a bar: 0 none, 1 kick, 2 snare, 3 hat
+        !byte 1, 0, 0, 3, 1, 1, 0, 0     ; no snare (2): the entries for it stay in the tables below
+drum_wave                           ; waveform of the first frame (without the gate): noise for all three. The kick turns into a triangle
+        !byte %10000000, %10000000, %10000000 ; later. (Noise combined with another waveform locks the noise: silence.)
+drum_ad                             ; attack and decay: the kick has a long tail (the next drum cuts it off), the snare is shorter, the hat very short
+        !byte $09, $05, $01
+drum_fhi                            ; start pitch (frequency high byte): the kick click, the noise of the snare and of the hat
+        !byte $60, $28, $a0
+kick_freq_hi                        ; the pitch of the kick on each frame after the hit: from 360 Hz in one jump down to 60 Hz,
+        !byte $18, $05, $04, $04, $04, $04, $04 ; where it stays for the thump. Only 7 frames (MUSIC_FRAMES): the next drum cuts it off
+kick_freq_lo
+        !byte $00, $00, $00, $00, $00, $00, $00
+
 score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
 hi_label
