@@ -7,6 +7,8 @@
 // Load it into the emulator page (paste it into the browser console, or inject it with a test
 // tool), then:
 //     bot.start()     start dodging (it also taps Space on the title and game over screens)
+//     bot.start('enemy')   or  bot.start('glitch')   do not dodge: fly into that one, to test hits
+//                     ('glitch' dodges the enemy until the Glitch is in the game, then rams the Glitch)
 //     bot.status()    {playing, score, best, lives, chapter, games, ...}
 //     bot.stop()      stop and release the keys
 //
@@ -72,7 +74,16 @@
         return best;
     }
 
+    function targetX(shipX) {                // where the bot wants to be
+        const glitchIn = peek(ZP.glitchActive) && (peek(VIC.enable) & 0x80);
+        const ram = mode === 'glitch' && glitchIn ? SPRITE.glitch : mode === 'enemy' ? SPRITE.enemy : null;
+        if (ram !== null && sprY(ram) < sprY(SPRITE.ship) + SIZE) return sprX(ram);   // ram it, until it has fallen past
+        if (ram !== null) return shipX;                                               // fallen past: wait for the next one
+        return bestX(shipX, threats());                                               // dodge mode (or no Glitch yet)
+    }
+
     // --- the loop -----------------------------------------------------------------------------
+    let mode = 'dodge';                      // 'dodge', 'enemy' or 'glitch': what the bot does with the falling things
     const stats = { running: false, best: 0, games: 0, maxChapter: 0, lastTap: 0, wasPlaying: false };
     let timer = null;
 
@@ -85,7 +96,7 @@
                 if (s > stats.best) stats.best = s;
                 if (peek(ZP.chapter) > stats.maxChapter) stats.maxChapter = peek(ZP.chapter);
                 const shipX = sprX(SPRITE.ship);
-                const tx = bestX(shipX, threats());
+                const tx = targetX(shipX);
                 hold(tx - shipX > 3 ? 'right' : tx - shipX < -3 ? 'left' : null);
             } else {
                 hold(null);
@@ -102,11 +113,15 @@
     }
 
     window.bot = {
-        start() { if (!stats.running) { stats.running = true; tick(); } return 'bot running'; },
+        start(m) {                           // m: 'dodge' (default), 'enemy' or 'glitch'
+            mode = m || 'dodge';
+            if (!stats.running) { stats.running = true; tick(); }
+            return 'bot running, mode ' + mode;
+        },
         stop() { stats.running = false; clearTimeout(timer); hold(null); return 'bot stopped'; },
         status() {
             return {
-                running: stats.running, playing: playing(), score: score(), best: stats.best,
+                running: stats.running, mode, playing: playing(), score: score(), best: stats.best,
                 lives: peek(ZP.lives), chapter: peek(ZP.chapter), maxChapter: stats.maxChapter, games: stats.games,
             };
         },

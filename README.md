@@ -32,7 +32,7 @@ The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by 
 
 #### The dodging bot
 
-`tools/bot.js` plays the game for you, to reach later chapters without playing by hand. Paste it into the browser console of the emulator page (or load it with a test tool), then use `bot.start()`, `bot.status()` and `bot.stop()`. It reads the sprite positions from the emulated C64 and steers with the arrow keys, walking to the spot on the screen that is farthest from the falling things (the enemy, and the Glitch once it is active). On the title and game over screens it taps Space, so it plays on after a game over. It only moves left and right and does not always survive: the status shows `best`, `maxChapter` and `games`.
+`tools/bot.js` plays the game for you, to reach later chapters without playing by hand. Paste it into the browser console of the emulator page (or load it with a test tool), then use `bot.start()`, `bot.status()` and `bot.stop()`. It reads the sprite positions from the emulated C64 and steers with the arrow keys, walking to the spot on the screen that is farthest from the falling things (the enemy, and the Glitch once it is active). On the title and game over screens it taps Space, so it plays on after a game over. To test hits it can ram instead of dodge: `bot.start('enemy')` or `bot.start('glitch')` flies into that one (`'glitch'` dodges the enemy until the Glitch is in the game). In that mode it ignores the other falling thing, so that one hits too now and then. It only moves left and right and does not always survive: the status shows `best`, `maxChapter` and `games`.
 
 ### Joystick readout
 
