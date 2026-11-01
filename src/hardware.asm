@@ -64,6 +64,7 @@ VIC_BG1    = $d022                  ; extended colour mode: background colour 1 
 ; ============================================================================================================
 COLOR_WHITE = 1                     ; C64 colour number for white
 COLOR_RED   = 2                     ; C64 colour number for red
+COLOR_GREEN = 5                     ; C64 colour number for green
 COLOR_YELLOW = 7                    ; C64 colour number for yellow
 COLOR_ORANGE = 8                    ; C64 colour number for orange
 COLOR_DGREY = 11                    ; C64 colour number for dark grey
