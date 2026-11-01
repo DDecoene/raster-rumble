@@ -91,6 +91,7 @@ game_over                           ; subroutine: show "game over" until a key o
         sta SCREEN + (BOUNCE_ROW + 3) * 40,x
         sta SUB_POS - SUB_COL,x     ; clear the tagline row
         sta PROMPT_POS - PROMPT_COL,x ; clear the prompt row
+        sta SCREEN + VERSION_ROW * 40,x ; clear the version row
         sta SCROLL_POS,x            ; clear the scroller row
         dex                         ; previous cell
         bpl .erase                  ; until X goes below 0
@@ -130,6 +131,14 @@ draw_title                          ; subroutine: draw the bouncing letters, the
         sta COLOR_RAM + PROMPT_POS - SCREEN,x ; colour it
         dex                         ; previous letter
         bpl .prompt                 ; until X goes below 0
+        ldx #VERSION_LEN - 1        ; version letter, counting down
+.version
+        lda version_text,x          ; one letter of the version
+        sta VERSION_POS,x           ; put it on the screen
+        lda #COLOR_DGREY            ; dark grey, it should not draw the eye
+        sta COLOR_RAM + VERSION_POS - SCREEN,x ; colour it
+        dex                         ; previous letter
+        bpl .version                ; until X goes below 0
         rts                         ; return to the caller
 
 !zone draw_over

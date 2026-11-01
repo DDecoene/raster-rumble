@@ -13,6 +13,7 @@
 ;   src/effects.asm    the game's demo effects: explosion burst, shake, parallax bands
 ;   src/chapter.asm    the screen between two chapters of the story
 ;   src/data.asm       tables and text
+;   src/version.asm    the version number, shown on the title
 ;   src/sprites.asm    the ship and enemy shapes at $2000
 ;
 ; 6502 refresher:
@@ -336,4 +337,5 @@ no_glitch
         !source "src/effects.asm"   ; explosion burst, shake, parallax bands of the game
         !source "src/chapter.asm"   ; the screen between two chapters of the story
         !source "src/data.asm"      ; tables and text
+        !source "src/version.asm"   ; the version number
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000
