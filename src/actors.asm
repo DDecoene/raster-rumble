@@ -1,9 +1,8 @@
 ; actors.asm - the ship and the enemy: 9-bit X movement, spawning, homing and difficulty
 
-!zone spawn_enemy
-spawn_enemy                         ; subroutine: enemy to the top, random X anywhere in the visible range
-        lda #MIN_Y - 10             ; just above the visible area, so it slides in
-        sta SPR1_Y                  ; set enemy Y
+!zone pick_x
+pick_x                              ; subroutine: pick a random X anywhere in the visible range
+                                    ; result: xhi:xlo (9 bits), nothing is written to the hardware
         jsr random_column           ; A = 0 to 39
         cmp #37                     ; we want 0 to 36 so the enemy stays fully on screen
         bcc .ok                     ; already in range
@@ -33,7 +32,15 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         bcc .noc2                   ; no overflow
         inc xhi                     ; overflow: high byte + 1
 .noc2
-        sta SPR1_X                  ; low 8 bits of the enemy X (A still holds xlo)
+        rts                         ; return: the caller reads xlo and xhi
+
+!zone spawn_enemy
+spawn_enemy                         ; subroutine: enemy to the top, random X anywhere in the visible range
+        lda #MIN_Y - 10             ; just above the visible area, so it slides in
+        sta SPR1_Y                  ; set enemy Y
+        jsr pick_x                  ; xhi:xlo = random X
+        lda xlo                     ; low 8 bits of the enemy X
+        sta SPR1_X                  ; set enemy X
         lda SPR_XHI                 ; bit 8 of all sprites
         and #%11111101              ; clear the enemy's bit (bit 1)
         ldx xhi                     ; is X 256 or more?
