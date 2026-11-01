@@ -1,5 +1,5 @@
 ; chapter.asm - the screen between two chapters of the story: the time of the new chapter and one sentence that types itself
-; See docs/verhaal.md. The music, the stars and the raster bars keep going, like on the title screen.
+; See docs/story.md. The music, the stars and the raster bars keep going, like on the title screen.
 
 !zone chapter_screen
 chapter_screen                      ; subroutine: show the time and the sentence of the chapter in the variable 'chapter', then back to the game

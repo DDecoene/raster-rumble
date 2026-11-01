@@ -27,7 +27,7 @@ MAX_SPEED   = 5                     ; the enemy never falls faster than this
 DODGES_PER_LEVEL = 10               ; every 10 dodged enemies the enemy gets 1 pixel per frame faster
 LIVES       = 5                     ; lives at the start of a game
 HIT_FRAMES  = 10                    ; how many frames the border stays red after a hit
-; The story: the night is split into chapters (see docs/verhaal.md)
+; The story: the night is split into chapters (see docs/story.md)
 CHAPTER_DODGES = 25                 ; dodges needed to finish a chapter (use 2 while testing, 25 takes minutes)
 CHAPTERS       = 6                  ; number of chapters in the story
 

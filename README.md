@@ -47,7 +47,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1
     src/title.asm         the title and game over screens and the any-key check
     src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
-    src/chapter.asm       the screen between two chapters of the story (see docs/verhaal.md)
+    src/chapter.asm       the screen between two chapters of the story (see docs/story.md)
     src/data.asm          tables and text (star data, note tables, labels)
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
