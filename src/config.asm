@@ -52,6 +52,7 @@ MAX_Y = 229                         ; bottom edge
 SCORE_POS  = SCREEN + 6             ; where the three score digits are printed (after the word "score ")
 LIVES_POS  = SCREEN + 24            ; where the lives digit is printed (after "lives " at column 18)
 HI_POS     = SCREEN + 34            ; where the three high score digits are printed (after "hi " at column 31)
+CLOCK_POS  = SCREEN + 11            ; where the time of the chapter ("03:00", 5 letters) is printed: between the score and the lives
 
 ; ============================================================================================================
 ; [5] TITLE SCREEN AND GAME OVER SCREEN

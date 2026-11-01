@@ -243,7 +243,7 @@ reset_difficulty                    ; subroutine: back to the slow start speed
         sta glitch_active           ; no Glitch until chapter 1 (move_glitch does nothing while this is 0)
         sta glitch_timer            ; and its timer holds garbage at boot, so clear it too
         sta enemy_dx                ; no sideways drift until chapter 2
-        rts                        ; return to the caller
+        jmp draw_clock              ; show 23:00 again (draw_clock returns to our caller)
 
 reset_ship                          ; subroutine: ship back to the start position
         lda #160                    ; start X: roughly the middle
