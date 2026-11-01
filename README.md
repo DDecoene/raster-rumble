@@ -2,17 +2,19 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-**Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far.
+**Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far, and the third (The Border) is under construction.
 
-![The Glitch in action](docs/screenshots/glitch.gif)
+![Gameplay: the Glitch and enemies that drift sideways](docs/screenshots/gameplay.gif)
 
-| Title | The Glitch (the green chip) |
+| Title | Chapter screen |
 |---|---|
-| ![Title screen](docs/screenshots/title.png) | ![Gameplay with the Glitch](docs/screenshots/glitch.png) |
-| **Chapter screen** | **Game over** |
-| ![Chapter screen](docs/screenshots/chapter.png) | ![Game over screen](docs/screenshots/gameover.png) |
+| ![Title screen](docs/screenshots/title.png) | ![Chapter screen](docs/screenshots/chapter.png) |
+| **The Glitch (the green chip, 01:00)** | **The Border (03:00): some enemies drift** |
+| ![Gameplay with the Glitch](docs/screenshots/glitch.png) | ![Gameplay in The Border](docs/screenshots/border.png) |
+| **Game over** | |
+| ![Game over screen](docs/screenshots/gameover.png) | |
 
-A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge. After ten dodges a chapter screen opens and the Glitch, a second falling enemy that suddenly speeds up, joins in.
+A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top), and between the score and the lives the clock shows how far into the night you are (`23:00` to `07:00`). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge. After 25 dodges a chapter screen opens and the next hour of the night begins. In the second chapter (01:00) the Glitch, a second falling enemy that suddenly speeds up, joins in. From the third chapter (03:00, The Border) on, half of the enemies drift sideways while they fall and bounce off the left and right edges.
 
 ## Tools
 
@@ -42,7 +44,7 @@ The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by 
 
 #### The dodging bot
 
-`tools/bot.js` plays the game for you, to reach later chapters without playing by hand. Paste it into the browser console of the emulator page (or load it with a test tool), then use `bot.start()`, `bot.status()` and `bot.stop()`. It reads the sprite positions from the emulated C64 and steers with the arrow keys, walking to the spot on the screen that is farthest from the falling things (the enemy, and the Glitch once it is active). On the title and game over screens it taps Space, so it plays on after a game over. To test hits it can ram instead of dodge: `bot.start('enemy')` or `bot.start('glitch')` flies into that one (`'glitch'` dodges the enemy until the Glitch is in the game). In that mode it ignores the other falling thing, so that one hits too now and then. It only moves left and right and does not always survive: the status shows `best`, `maxChapter` and `games`.
+`tools/bot.js` plays the game for you, to reach later chapters without playing by hand. Paste it into the browser console of the emulator page (or load it with a test tool), then use `bot.start()`, `bot.status()` and `bot.stop()`. It reads the sprite positions from the emulated C64 and steers with the arrow keys, walking to the spot on the screen that is farthest from the falling things (the enemy, and the Glitch once it is active). An enemy that drifts sideways counts twice: where it is now, and where it will be when it reaches the height of the ship (the bounces off the edges included). On the title and game over screens it taps Space, so it plays on after a game over. To test hits it can ram instead of dodge: `bot.start('enemy')` or `bot.start('glitch')` flies into that one (`'glitch'` dodges the enemy until the Glitch is in the game). In that mode it ignores the other falling thing, so that one hits too now and then. It only moves left and right and does not always survive: the status shows `best`, `maxChapter` and `games`.
 
 ### Joystick readout
 
@@ -58,7 +60,7 @@ The game tells *The Night of the Raster Beam*. It is 1986 and a kid forgot to sw
 |---|---|---|
 | 23:00 | Boot | yes |
 | 01:00 | The Glitch | yes |
-| 03:00 | The Border | not yet |
+| 03:00 | The Border | partly: enemies that drift sideways and bounce, the rest (flickering border, new colours and bass) is still to come |
 | 04:30 | The Memory | not yet |
 | 06:00 | The Raster Beam | not yet |
 | 07:00 | The Disk | not yet |
@@ -71,7 +73,7 @@ The latest build is always on the [Releases page](https://github.com/DDecoene/ra
 
 How it works:
 
-- The version lives in `src/version.asm` (`!scr "v0.0.1"`) and is shown on the title screen. `make version` prints it.
+- The version lives in `src/version.asm` (`!scr "v0.0.3"`) and is shown on the title screen. `make version` prints it.
 - `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or that does not build.
 - When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
 - So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
@@ -87,13 +89,13 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     src/main.asm          startup code and the main loop, includes everything else
     src/hardware.asm      names for the VIC, SID and CIA registers, colours, fixed memory areas
     src/config.asm        difficulty settings, screen layout, zero page and RAM variable addresses
-    src/actors.asm        ship and enemy: 9-bit X movement, spawning, homing, difficulty
+    src/actors.asm        ship, enemy and Glitch: 9-bit X movement, spawning, homing, drifting and bouncing, difficulty
     src/score.asm         score and high score
     src/starfield.asm     RAM character set, scrolling stars, random_column
     src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1, sound effects on voice 3
     src/title.asm         the title and game over screens and the any-key check
     src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
-    src/chapter.asm       the screen between two chapters of the story (see docs/story.md)
+    src/chapter.asm       the screen between two chapters of the story (see docs/story.md), and the clock on the top row
     src/data.asm          tables and text (star data, note tables, labels)
     src/version.asm       the version number (the one place it lives), shown on the title screen
     src/sprites.asm       the ship and enemy shapes at $2000
@@ -151,6 +153,11 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 | `$1d` | `sfx_timer` | frames left in which a sound effect owns voice 3 (the drums wait) |
 | `$21` | `dodge_flash` | frames left of the glow after a dodge |
 | `$29`-`$2d`, `$2f` | `plasma_ph1`-`plasma_ph3`, `plasma_row`, `plasma_rowv`, `plasma_cnt` | the plasma: phases, next row, the vertical wave value, row counter for `plasma_init` |
+| `$31` | `chapter` | which chapter we are in: 0 (23:00) to 5 (07:00) |
+| `$32` | `chapter_dodges` | dodged enemies in this chapter so far |
+| `$33` | `glitch_active` | 0 = no Glitch yet, 1 = it is falling |
+| `$34` | `glitch_timer` | frames the current Glitch has been falling |
+| `$35` | `enemy_dx` | sideways direction of the enemy: 0 = straight down, 1 = right, `$ff` = left |
 | `$22`-`$24` | `band1`-`band3` | `$d016` value of each parallax band |
 | `$25` | `exp_timer` | frames left of the explosion (0 = none) |
 | `$26`-`$28` | `shake_x`, `shake_y`, `fx_tmp` | this frame's shake and a scratch byte |
@@ -163,7 +170,7 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 
 ### Starfield
 
-12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Stars never touch row 0, which holds the score. Random columns come from `random_column`: a random byte mixed with the frame counter and reduced to 0-39 by subtracting 40 repeatedly. Re-reading the SID noise register a few cycles after a rejected value (the old source) gave strongly related values, which bunched all the stars into the left quarter of the screen. `setup_charset`, `setup_stars` and `update_stars` do the work.
+12 stars scroll down behind everything, in three speeds (1, 2, 3 pixels per frame) and three greys, so the slow dark ones look far away. The ROM letters and digits (screen codes 0-63) are copied to RAM at `$2800` and `$d018` points the VIC at that copy. Screen codes 64-71 are 8 star shapes, each a dot in a different pixel row. A star moves down by switching to the next shape, and by one character row when it passes the bottom of its cell. Every star remembers what was in its cell before (`star_ucode`, `star_ucol`) and puts that back when it moves on. If a star flies into a cell where another star already sits, it must not remember that other star's shape as the background: when the two leave in the wrong order the shape would stay on the screen for good. On the title and game over screens there is no plasma to clean that up, and the dots piled up (11 star shapes on screen after 15 seconds, 47 after a minute, with only 12 stars). `update_stars` now remembers a plain space instead. Stars never touch row 0, which holds the score. Random columns come from `random_column`: a random byte mixed with the frame counter and reduced to 0-39 by subtracting 40 repeatedly. Re-reading the SID noise register a few cycles after a rejected value (the old source) gave strongly related values, which bunched all the stars into the left quarter of the screen. `setup_charset`, `setup_stars` and `update_stars` do the work.
 
 ### Sound
 
@@ -202,6 +209,9 @@ These constants in `src/config.asm` change the difficulty without touching the l
 - `ENEMY_SPEED`: starting fall speed in pixels per frame.
 - `MAX_SPEED`: the fastest the enemy gets.
 - `DODGES_PER_LEVEL`: dodges needed per speed-up.
+- `CHAPTER_DODGES`: dodges needed to finish a chapter (use 2 while testing, 25 takes minutes).
+- `ENEMY_DRIFT`: pixels per frame a drifting enemy moves sideways in The Border (higher is harder to dodge, and it reaches the edges more often).
+- `GLITCH_WAIT`, `GLITCH_SLOW`, `GLITCH_FAST`: how long and how fast the Glitch falls.
 - `LIVES`: lives per game. `OVER_WAIT`: frames the game over screen ignores keys.
 - `HIT_FRAMES`: how long the border flashes after a hit.
 - `MUSIC_TICKS`: ticks per step of the tune (a tick is 10 ms), higher is slower.
@@ -229,6 +239,8 @@ These constants in `src/config.asm` change the difficulty without touching the l
 - **Plasma behind the playfield.** A real 2D text mode plasma in dark blue, in the 24 rows under the score, drawn in extended colour mode (ECM, bit 6 of `$d011`): every cell has its own background colour, picked by bits 6 and 7 of its screen code from `$d021` (black) and `$d022` (the plasma colour, `VIC_BG1`). That is also why stars can sit on the plasma without a black box around them: a star gets the background bits of the cell it is in. ECM only has 64 characters, so the star shapes live at screen codes 33 to 40 (`STAR_CHAR`) and the two dither patterns at 41 (sparse) and 42 (checkerboard); the title screens do not use those codes. The value of a cell is the sum of three sine waves, as in the classic plasma: a horizontal one per column (`PLASMA_COLX`, once per frame in `plasma_prep`), a vertical one per row (`plasma_rowv`, once per row) and a diagonal one (`dtab`, period 32, read at x + row + phase). The sum (0 to 189) picks a screen code from `plasma_code` (black, sparse dots, checkerboard, or the plasma colour as background) and a colour for the dots from `plasma_ramp`; below 110 it is black, so only the peaks show. The inner loop of `plasma_step` patches its own addresses (self-modifying code) per row. `game_bars` colours 4 rows per frame between the music ticks and scroll bands, so the whole plasma is renewed every 6 frames. A star remembers the code and colour that were in its cell (`star_ucode`, `star_ucol`) and puts them back when it moves on; `plasma_step` redraws the stars of its row. A star inside a dithered cell gets a plain cell (one background colour per cell). `plasma_init` colours all rows at once after the title and game over screens and switches ECM on; `reset_scroll` switches it off for those screens. Moods: nebula, fire during an explosion, a glow just after a dodge (`ramp_lo`/`ramp_hi`, `mood_bg1`). To make it dimmer, raise the 110, 125, 140, 160 thresholds in `plasma_code` and `plasma_ramp` (`data.asm`).
 - **Explosion.** On a hit `start_explosion` launches 5 sprites (2 to 6, a round dot at `$2100`) from the ship in a star shape. `update_particles` moves them (9-bit X in `PART_LO`/`PART_HI` at `$c600`, switches a sprite off when it leaves the screen) and cycles white, yellow, orange, red. For `EXP_FRAMES` (28) frames the screen shakes: `update_bands` writes a random vertical scroll to `$d011` (below the playfield, where the VIC does not mind) and adds a random horizontal shake to the bands, with `shake_mask` making it smaller as the explosion ages. While `exp_timer` runs no new hit counts (the particles also set the sprite collision bits), a short grace period.
 - **The Glitch (chapter 1 and later).** A second falling enemy on sprite 7: a green microchip in two hi-res frames (`glitch_data`/`glitch_data_b`, pointers 133/134, flickering every 8 frames). It appears when chapter 1 begins: `main.asm` calls `start_glitch` right after `chapter_screen` (the chapter screen switches all sprites off and back on, so it must come after). `start_glitch` sets `glitch_active` (`$33`), spawns it at a random X with `spawn_glitch` (which uses `pick_x`, shared with `spawn_enemy`) and sets bit 7 of `$d015`. `move_glitch` runs every frame: it falls slowly (`GLITCH_SLOW`) for `GLITCH_WAIT` frames (`glitch_timer`, `$34`), then fast (`GLITCH_FAST`), and gives +1 point when it reaches the bottom. A hit by the ship (`$d01e` `%10000001`) costs a life like the enemy does, and afterwards both respawn at the top. `reset_difficulty` clears `glitch_active`, so a new game starts without it. The explosion only uses sprites 2 to 6 so that sprite 7 stays the Glitch, and `update_particles` and `chapter_screen` keep bit 7 of `$d015` on while it is active.
+- **The Border (chapter 2 and later).** From `chapter` 2 (03:00) `spawn_enemy` throws a four-sided die (`random_byte` and `#%00000011`): 0 or 1 means the enemy falls straight down, 2 drifts right, 3 drifts left. The direction lives in `enemy_dx` (`$35`): 0, 1 or `$ff` (-1; `bmi` tests the sign bit). Every frame the main loop moves a drifting enemy `ENEMY_DRIFT` pixels with `enemy_right` or `enemy_left` (the same 9-bit helpers homing uses), and a drifting enemy does not home: homing pulled it back to the ship, which is always on screen, so it almost never reached an edge. `bounce_enemy` (in `actors.asm`) turns it around at X 24 and X 320, the edges the ship uses too, comparing the 9-bit X with the high bit from `$d010`. A bounce can overshoot by one pixel because the check comes after the step. `spawn_enemy` and `reset_difficulty` set `enemy_dx` back to 0. Flying enemies still count as a dodge at the bottom (`MAX_Y`), so the chapter rules did not change.
+- **The clock.** `draw_clock` (in `chapter.asm`) prints the five letters of `chapter_time` for the current chapter at `CLOCK_POS` on the top row, in white, between the score and the lives. It runs just before every chapter screen (which leaves row 0 alone, so the new time is already there while the chapter screen shows) and from `reset_difficulty`, so a new game starts at `23:00`. The title screen only clears rows 1 to 24, so the clock is visible there too.
 - **Parallax bands.** The playfield is split in three bands (rows 1 to 6, 7 to 14, 15 to 24; the score row never moves). Each band has its own horizontal fine scroll (`$d016`, `band1` to `band3`, set at lines `BAND1_LINE` to `BAND3_LINE` by `game_bars`), 0 to 2, 0 to 4 and 0 to 7 pixels, from the ship X (`par_far`, `par_mid`, `par_near`): the stars lean the other way when you fly, the near ones most.
 
 ## Contributing and license

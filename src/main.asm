@@ -240,11 +240,28 @@ frame                               ; the game loop, runs once per screen refres
         bcs +                       ; carry set = not pressed, skip
         jsr ship_right              ; X + 1 (9 bits), stops at the right edge
 +
+        lda enemy_dx                ; a drifting enemy has its own sideways movement and does not home (it would be pulled
+        bne +                       ; back towards the ship, which is always on screen, so it would never reach the edge)
         lda frame_count             ; homing: only on every other frame, so the enemy is slower than the ship
-        and #%00000001              ; keep only the lowest bit, it is 1 on every other frame
+        and #%00000001             ; keep only the lowest bit, it is 1 on every other frame
         beq +                       ; 0 = skip homing this frame
         jsr home_enemy              ; one pixel towards the ship
 +
+        lda enemy_dx                ; the sideways drift of the enemy
+        beq no_drift                ; 0: straight down, nothing to do
+        ldy #ENEMY_DRIFT            ; Y counts the pixels to move this frame
+drift_step
+        lda enemy_dx                ; (enemy_left and enemy_right only change A, so Y survives)
+        bmi drift_left              ; bit 7 set = negative = left
+        jsr enemy_right             ; 1: one pixel right
+        jmp drift_next
+drift_left
+        jsr enemy_left              ; $ff: one pixel left
+drift_next
+        dey                         ; one pixel done
+        bne drift_step              ; more to go
+no_drift
+        jsr bounce_enemy            ; at the left or right edge a drifting enemy turns around
         lda SPR1_Y                  ; current enemy Y
         clc                         ; clear carry before adding
         adc enemy_speed             ; fall as fast as the current level allows
@@ -265,6 +282,7 @@ frame                               ; the game loop, runs once per screen refres
         cmp #CHAPTERS - 1           ; already in the last one?
         bcs same_chapter            ; yes: the ending is not built yet, so the game just carries on
         inc chapter                 ; the next chapter (23:00 becomes 01:00)
+        jsr draw_clock              ; the new time on the top row (the chapter screen leaves that row alone)
         jsr chapter_screen          ; show its time and sentence, then back to the game
         lda chapter                 ; chapter_screen switched the sprites back to ship + enemy only, so ...
         cmp #1                      ; ... in chapter 1 (01:00) the Glitch joins now, after that screen

@@ -14,15 +14,17 @@
 //
 // The bot only moves left and right. It picks the X on the screen that is farthest from every
 // falling thing (the enemy, and the Glitch once it is active) and walks there, preferring places
-// that are close to where the ship already is.
+// that are close to where the ship already is. A drifting enemy (chapter 2, The Border) counts twice:
+// where it is now, and where it will be when it reaches the height of the ship (bounces included).
 
 (function () {
     // numbers that mirror src/config.asm and src/hardware.asm: keep them in step with those files
     const MIN_X = 24, MAX_X = 320;           // left edge of the ship can be 24 to 320
     const SPRITE = { ship: 0, enemy: 1, glitch: 7 };
-    const ZP = { score: 0x04, lives: 0x0e, chapter: 0x31, glitchActive: 0x33 };
+    const ZP = { score: 0x04, enemySpeed: 0x07, lives: 0x0e, chapter: 0x31, glitchActive: 0x33, enemyDx: 0x35 };
     const VIC = { x: 0xd000, xhi: 0xd010, enable: 0xd015 };
-    const SIZE = 24;                         // sprite width and height in pixels
+    const ENEMY_DRIFT = 2;                   // pixels per frame a drifting enemy moves sideways
+    const SIZE = 24;                        // sprite width and height in pixels
 
     const peek = (a) => Module._wasm_peek(a);
     const sprX = (n) => peek(VIC.x + 2 * n) + ((peek(VIC.xhi) >> n) & 1) * 256;
@@ -56,8 +58,19 @@
     const score = () => peek(ZP.score) * 100 + peek(ZP.score + 1) * 10 + peek(ZP.score + 2);
     const playing = () => (peek(VIC.enable) & 3) === 3 && peek(ZP.lives) > 0;
 
+    function enemyLandingX() {               // where a drifting enemy will be when it reaches the height of the ship
+        const dx = ((peek(ZP.enemyDx) << 24) >> 24) * ENEMY_DRIFT;  // 0, 1 or $ff (a signed byte) times the pixels per frame
+        const speed = Math.max(1, peek(ZP.enemySpeed));
+        const frames = Math.max(0, Math.floor((sprY(SPRITE.ship) - sprY(SPRITE.enemy)) / speed));
+        const span = MAX_X - MIN_X;                                 // it bounces between the edges, like a ball
+        let pos = (sprX(SPRITE.enemy) - MIN_X + dx * frames) % (2 * span);
+        if (pos < 0) pos += 2 * span;
+        return MIN_X + (pos > span ? 2 * span - pos : pos);
+    }
+
     function threats() {                     // everything that can hit the ship: [{x, y}]
         const list = [{ x: sprX(SPRITE.enemy), y: sprY(SPRITE.enemy) }];
+        if (peek(ZP.enemyDx)) list.push({ x: enemyLandingX(), y: sprY(SPRITE.enemy) });   // a drifting enemy also threatens where it is heading
         if (peek(ZP.glitchActive) && (peek(VIC.enable) & 0x80)) list.push({ x: sprX(SPRITE.glitch), y: sprY(SPRITE.glitch) });
         const shipY = sprY(SPRITE.ship);
         return list.filter((t) => t.y < shipY + SIZE);   // one that has already fallen past the ship is no danger

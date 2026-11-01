@@ -1,6 +1,26 @@
 ; chapter.asm - the screen between two chapters of the story: the time of the new chapter and one sentence that types itself
 ; See docs/story.md. The music, the stars and the raster bars keep going, like on the title screen.
 
+!zone draw_clock
+draw_clock                          ; subroutine: print the time of the current chapter on the top row, so the player knows where in the night they are
+        lda chapter                 ; 5 letters per chapter, so the offset is chapter * 5
+        asl                         ; times 2
+        asl                         ; times 4
+        clc                         ; clear carry before adding
+        adc chapter                 ; plus 1 = times 5
+        tax                         ; X = where this chapter's time starts in chapter_time
+        ldy #0                      ; Y = letter on the screen, counting up
+.letter
+        lda chapter_time,x          ; one letter of the time
+        sta CLOCK_POS,y             ; put it on the top row
+        lda #COLOR_WHITE            ; white, like the rest of the top row
+        sta COLOR_RAM + CLOCK_POS - SCREEN,y ; colour it
+        inx                         ; next letter in the table
+        iny                         ; next place on the screen
+        cpy #5                      ; did we print all 5?
+        bne .letter                 ; no, continue
+        rts                         ; return to the caller
+
 !zone chapter_screen
 chapter_screen                      ; subroutine: show the time and the sentence of the chapter in the variable 'chapter', then back to the game
         jsr reset_scroll            ; no shake, no scroll, extended colour mode off (the plasma needs it, this screen does not)

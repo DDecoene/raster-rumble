@@ -1,5 +1,7 @@
 # Chapter 2: the second enemy
 
+> These notes are about **The Glitch**, the second enemy (chapter 1, 01:00, in the code and in `docs/story.md`). They were written when the story still counted from 1. The Border (03:00) has no notes file; its plan is in `docs/story.md`.
+
 Notes from the brainstorm. Goal: you write the code, Claude explains and reviews.
 
 ## What we want

@@ -30,6 +30,8 @@ HIT_FRAMES  = 10                    ; how many frames the border stays red after
 ; The story: the night is split into chapters (see docs/story.md)
 CHAPTER_DODGES = 25                 ; dodges needed to finish a chapter (use 2 while testing, 25 takes minutes)
 CHAPTERS       = 6                  ; number of chapters in the story
+; The Border (chapter 2): some enemies drift sideways and bounce off the left and right edges
+ENEMY_DRIFT = 2                     ; pixels per frame a drifting enemy moves sideways (half the screen while it falls)
 ; The Glitch (chapter 2, the second enemy): it falls slowly, then suddenly fast, with no warning
 GLITCH_WAIT = 60                    ; frames the Glitch falls slowly (1.2 seconds), then it speeds up
 GLITCH_SLOW = 1                     ; pixels per frame while it falls slowly
@@ -50,6 +52,7 @@ MAX_Y = 229                         ; bottom edge
 SCORE_POS  = SCREEN + 6             ; where the three score digits are printed (after the word "score ")
 LIVES_POS  = SCREEN + 24            ; where the lives digit is printed (after "lives " at column 18)
 HI_POS     = SCREEN + 34            ; where the three high score digits are printed (after "hi " at column 31)
+CLOCK_POS  = SCREEN + 11            ; where the time of the chapter ("03:00", 5 letters) is printed: between the score and the lives
 
 ; ============================================================================================================
 ; [5] TITLE SCREEN AND GAME OVER SCREEN
@@ -176,6 +179,8 @@ chapter_dodges = $32                ; dodged enemies in this chapter so far. Bac
 ; The Glitch
 glitch_active = $33                 ; 0 = no Glitch yet (chapter 0), 1 = it is falling. Set to 0 in reset_difficulty
 glitch_timer  = $34                 ; frames the current Glitch has been falling (counts up, back to 0 when it respawns)
+; The Border
+enemy_dx      = $35                 ; sideways direction of the enemy: 0 = straight down, 1 = right, $ff (-1) = left
 ; Scratch bytes shared by several routines (they must not be needed at the same time)
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
 xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr
