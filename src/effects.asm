@@ -189,8 +189,8 @@ update_particles                    ; subroutine: once per frame: move the burst
         beq .none                   ; no
         dec exp_timer               ; one frame older
         bne .go
-        lda SPR_ENABLE              ; it is over: only the ship and the enemy stay on
-        and #%00000011
+        lda SPR_ENABLE              ; it is over: only the ship, the enemy and the Glitch (bit 7) stay on
+        and #%10000011
         sta SPR_ENABLE
 .none
         rts                         ; return to the caller

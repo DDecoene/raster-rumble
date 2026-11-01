@@ -78,6 +78,10 @@ chapter_screen                      ; subroutine: show the time and the sentence
 
         jsr plasma_init             ; the playfield becomes a plasma again (this also removes the text)
         lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 on
-        sta SPR_ENABLE              ; show the ship and the enemy again
+        ldx glitch_active           ; is the Glitch in the game already? (ldx leaves A alone)
+        beq .show                   ; no (chapter 1 is just starting: start_glitch switches it on after this screen)
+        ora #%10000000              ; yes: bit 7 = sprite 7 too
+.show
+        sta SPR_ENABLE              ; show the ship, the enemy and the Glitch again
         lda SPR_COLL                ; read the collision register once to clear leftovers
         rts                         ; back to the game
