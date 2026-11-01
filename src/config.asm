@@ -66,6 +66,12 @@ PROMPT_POS = SCREEN + PROMPT_ROW * 40 + PROMPT_COL
 RESTART_LEN = 23                    ; letters in "push any key to restart"
 RESTART_COL = 8
 RESTART_POS = SCREEN + PROMPT_ROW * 40 + RESTART_COL
+; Chapter screen (between two chapters of the story)
+CHAP_TIME_POS = SCREEN + 9 * 40 + 17   ; screen address of the time, "23:00" (5 letters) on row 9
+CHAP_TEXT_POS = SCREEN + 12 * 40 + 4   ; screen address of the sentence, row 12, column 4
+CHAPTER_LEN   = 32                  ; letters reserved for every sentence (the macro in data.asm pads shorter ones with spaces).
+                                    ; Keep it 32: chapter.asm finds a sentence with 5 shifts left (chapter * 32)
+CHAP_FRAMES   = 150                 ; how long the chapter screen shows: 3 seconds
 ; Waiting times
 KEY_FRAMES = 1                      ; frames a key must be down to start the game: a quick tap in the browser emulator lasts only one frame
 RELEASE_FRAMES = 250                ; the title ignores all keys for this many frames (5 seconds) after loading: emulators type their own RUN keys then
@@ -153,7 +159,7 @@ plasma_ph2  = $2a                   ; ... of the vertical wave
 plasma_ph3  = $2b                   ; ... of the diagonal wave (0 to 63)
 plasma_row  = $2c                   ; ... the next row to recolour (1 to 24; row 0 is the score)
 plasma_rowv = $2d                   ; ... the vertical wave value of the row that is being coloured
-                                    ; $2e is free
+chap_timer  = $2e                   ; chapter screen: frames it has been showing (counts up to CHAP_FRAMES)
 plasma_cnt  = $2f                   ; counts rows while the whole plasma is built at once
 star_bg     = $30                   ; scratch: the background bits (6 and 7) of the screen code under a star
 ; The story

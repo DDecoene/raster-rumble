@@ -139,7 +139,9 @@ reset_difficulty                    ; subroutine: back to the slow start speed
         sta enemy_speed             ; set it
         lda #0                      ; A = 0
         sta dodge_count             ; no dodges counted yet
-        rts                         ; return to the caller
+        sta chapter                 ; back to the first chapter (23:00), A is still 0
+        sta chapter_dodges          ; no dodges counted in this chapter yet
+        rts                        ; return to the caller
 
 reset_ship                          ; subroutine: ship back to the start position
         lda #160                    ; start X: roughly the middle

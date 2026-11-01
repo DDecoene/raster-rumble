@@ -11,6 +11,7 @@
 ;   src/title.asm      the title and game over screens and the any-key check
 ;   src/demo.asm       the demo effects of those screens: raster bars, bouncing letters, scroller
 ;   src/effects.asm    the game's demo effects: explosion burst, shake, parallax bands
+;   src/chapter.asm    the screen between two chapters of the story
 ;   src/data.asm       tables and text
 ;   src/sprites.asm    the ship and enemy shapes at $2000
 ;
@@ -261,6 +262,18 @@ frame                               ; the game loop, runs once per screen refres
         lda #DODGE_FLASH            ; the bars flash gold
         sta dodge_flash
         jsr count_dodge             ; every 10 dodges the enemy speeds up
+        inc chapter_dodges          ; one more dodge in this chapter
+        lda chapter_dodges          ; load it to compare
+        cmp #CHAPTER_DODGES         ; enough to finish the chapter?
+        bcc same_chapter            ; no, carry on (a named label: the '+' labels around here are already taken by other branches)
+        lda #0                      ; yes: start counting again ...
+        sta chapter_dodges          ; ... from 0
+        lda chapter                 ; the current chapter
+        cmp #CHAPTERS - 1           ; already in the last one?
+        bcs same_chapter            ; yes: the ending is not built yet, so the game just carries on
+        inc chapter                 ; the next chapter (23:00 becomes 01:00)
+        jsr chapter_screen          ; show its time and sentence, then back to the game
+same_chapter
         jsr spawn_enemy             ; respawn it at the top
 +
         lda SPR_COLL                ; which sprites touched? (reading also clears the register)
@@ -329,5 +342,6 @@ life_left
         !source "src/title.asm"     ; the title screen and the any-key check
         !source "src/demo.asm"      ; raster bars, bouncing letters, scroller
         !source "src/effects.asm"   ; explosion burst, shake, parallax bands of the game
+        !source "src/chapter.asm"   ; the screen between two chapters of the story
         !source "src/data.asm"      ; tables and text
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000

@@ -58,6 +58,25 @@ over_text
         !scr "  game over  "        ; 13 letters like the title, so both use the same bouncing code
 restart_text
         !scr "push any key to restart" ; 23 letters, RESTART_LEN
+chapter_time                        ; the time of each chapter, 5 letters each, so chapter * 5 is the offset
+        !scr "23:00"                ; chapter 0
+        !scr "01:00"                ; chapter 1
+        !scr "03:00"                ; chapter 2
+        !scr "04:30"                ; chapter 3
+        !scr "06:00"                ; chapter 4
+        !scr "07:00"                ; chapter 5
+!macro chapter_line .t {            ; ACME macro: one sentence, padded with spaces up to CHAPTER_LEN letters
+.start                              ; (so every sentence is exactly as long and chapter * CHAPTER_LEN is the offset)
+        !scr .t                     ; the sentence as screen codes
+        !fill CHAPTER_LEN - (* - .start), $20 ; fill up with spaces; a sentence that is too long gives an error
+}
+chapter_text                        ; the sentence of each chapter, CHAPTER_LEN (32) letters each, so chapter * 32 is the offset
+        +chapter_line "someone forgot to switch me off."    ; chapter 0
+        +chapter_line "a glitch. slow, harmless. a lie."    ; chapter 1
+        +chapter_line "the screen edge is wearing thin."    ; chapter 2
+        +chapter_line "old programs wake in the dark."      ; chapter 3
+        +chapter_line "the beam that draws me hunts me."    ; chapter 4
+        +chapter_line "save your name before dawn."         ; chapter 5
 title_text
         !scr "raster rumble"        ; 13 letters, TITLE_LEN
 sub_text
