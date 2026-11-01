@@ -71,14 +71,6 @@ How it works:
 
 One-time GitHub setup (Settings, Branches, rule for `main`): require a pull request before merging, require the status check `check` (the job of `pr-check.yml`), and include administrators, so nobody can push to `main` directly.
 
-## Contributing and license
-
-Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md) (pull requests go to `dev`).
-
-The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license.
-
-I have no intention of selling this game, but I do not want anyone else to sell it either. That is why the license is non-commercial, and why contributions are handed over to me: it keeps the whole project under one owner, free to play for everyone and protected from commercial use.
-
 ## Project layout
 
     LICENSE               CC BY-NC-SA 4.0
@@ -229,3 +221,11 @@ These constants in `src/config.asm` change the difficulty without touching the l
 - **Explosion.** On a hit `start_explosion` launches 5 sprites (2 to 6, a round dot at `$2100`) from the ship in a star shape. `update_particles` moves them (9-bit X in `PART_LO`/`PART_HI` at `$c600`, switches a sprite off when it leaves the screen) and cycles white, yellow, orange, red. For `EXP_FRAMES` (28) frames the screen shakes: `update_bands` writes a random vertical scroll to `$d011` (below the playfield, where the VIC does not mind) and adds a random horizontal shake to the bands, with `shake_mask` making it smaller as the explosion ages. While `exp_timer` runs no new hit counts (the particles also set the sprite collision bits), a short grace period.
 - **The Glitch (chapter 1 and later).** A second falling enemy on sprite 7: a green microchip in two hi-res frames (`glitch_data`/`glitch_data_b`, pointers 133/134, flickering every 8 frames). It appears when chapter 1 begins: `main.asm` calls `start_glitch` right after `chapter_screen` (the chapter screen switches all sprites off and back on, so it must come after). `start_glitch` sets `glitch_active` (`$33`), spawns it at a random X with `spawn_glitch` (which uses `pick_x`, shared with `spawn_enemy`) and sets bit 7 of `$d015`. `move_glitch` runs every frame: it falls slowly (`GLITCH_SLOW`) for `GLITCH_WAIT` frames (`glitch_timer`, `$34`), then fast (`GLITCH_FAST`), and gives +1 point when it reaches the bottom. A hit by the ship (`$d01e` `%10000001`) costs a life like the enemy does, and afterwards both respawn at the top. `reset_difficulty` clears `glitch_active`, so a new game starts without it. The explosion only uses sprites 2 to 6 so that sprite 7 stays the Glitch, and `update_particles` and `chapter_screen` keep bit 7 of `$d015` on while it is active.
 - **Parallax bands.** The playfield is split in three bands (rows 1 to 6, 7 to 14, 15 to 24; the score row never moves). Each band has its own horizontal fine scroll (`$d016`, `band1` to `band3`, set at lines `BAND1_LINE` to `BAND3_LINE` by `game_bars`), 0 to 2, 0 to 4 and 0 to 7 pixels, from the ship X (`par_far`, `par_mid`, `par_near`): the stars lean the other way when you fly, the near ones most.
+
+## Contributing and license
+
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md) (pull requests go to `dev`).
+
+The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license.
+
+I have no intention of selling this game, but I do not want anyone else to sell it either. That is why the license is non-commercial, and why contributions are handed over to me: it keeps the whole project under one owner, free to play for everyone and protected from commercial use.
