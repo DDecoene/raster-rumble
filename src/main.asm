@@ -7,7 +7,7 @@
 ;   src/actors.asm     ship and enemy movement (9-bit X), spawning, homing, difficulty
 ;   src/score.asm      score and high score
 ;   src/starfield.asm  RAM character set, scrolling stars, random_column
-;   src/music.asm      the tune on SID voice 2
+;   src/music.asm      the tune on SID voice 2, and the sound effects on voice 3 (blip, ting, explosion)
 ;   src/title.asm      the title and game over screens and the any-key check
 ;   src/demo.asm       the demo effects of those screens: raster bars, bouncing letters, scroller
 ;   src/effects.asm    the game's demo effects: explosion burst, shake, parallax bands

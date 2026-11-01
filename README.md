@@ -48,7 +48,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/actors.asm        ship and enemy: 9-bit X movement, spawning, homing, difficulty
     src/score.asm         score and high score
     src/starfield.asm     RAM character set, scrolling stars, random_column
-    src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1
+    src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1, sound effects on voice 3
     src/title.asm         the title and game over screens and the any-key check
     src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
     src/chapter.asm       the screen between two chapters of the story (see docs/story.md)
