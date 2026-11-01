@@ -46,6 +46,7 @@ No long texts. The story comes through things we already have or can build easil
 | Chapter counter | One byte `chapter` in `config.asm`, set to 0 in `reset_difficulty`. |
 | Tables per chapter | Colours, speed, number of enemies, music part, dodges to reach: one row per chapter in `data.asm`. |
 | Interlude screen | Reuse the text routines and raster effects from `title.asm` and `demo.asm`. |
+| Clock | `draw_clock` in `chapter.asm` prints the time of the chapter on the top row. *(done)* |
 | More enemies | The table refactor from `docs/chapter2.md`, then the sprite budget. |
 | Boss | Raster interrupt for the bar; collision on a Y range instead of sprite collision. |
 | Saving to disk | KERNAL SAVE/LOAD, already on the list. |
@@ -53,8 +54,8 @@ No long texts. The story comes through things we already have or can build easil
 ## Build order
 
 1. **Chapter counter and interlude screen** with only what exists now. The story is visible straight away. *(done)*
-2. **The Glitch** (chapter 2 from the notes).
-3. **The Border**: colours, diagonal enemies.
+2. **The Glitch** (the notes are in `docs/chapter2.md`). *(done)*
+3. **The Border**: sideways drifting enemies that bounce off the edges *(done)*, the clock on the top row *(done)*, border and background flicker, new colours per chapter and a different bass line *(still to do)*.
 4. **The Memory**: multiple enemies.
 5. **The Raster Beam**: boss.
 6. **The Disk**: ending and saving.
