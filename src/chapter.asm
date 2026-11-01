@@ -48,13 +48,13 @@ chapter_screen                      ; subroutine: show the time and the sentence
         lda chap_timer              ; the 'ting ting': a note on the first frame ...
         bne .second
         ldx #$60                    ; (SID frequency high byte: about 1.5 kHz)
-        jsr chapter_ting
+        jsr sfx_ting
         jmp .tinged
 .second
         cmp #CHAP_TING_GAP          ; ... and a higher one CHAP_TING_GAP frames later
         bne .tinged
         ldx #$80                    ; a fourth higher (4/3 of $60): about 2 kHz
-        jsr chapter_ting
+        jsr sfx_ting
 .tinged
 
         lda chap_timer              ; the sentence types itself: one more letter every 2 frames ...
@@ -97,21 +97,3 @@ chapter_screen                      ; subroutine: show the time and the sentence
         sta SPR_ENABLE              ; show the ship, the enemy and the Glitch again
         lda SPR_COLL                ; read the collision register once to clear leftovers
         rts                         ; back to the game
-
-!zone chapter_ting
-chapter_ting                        ; subroutine: one bell-like note on voice 3, the pitch (SID frequency high byte) in X
-        lda #$06                    ; attack 0, decay 6: it rings for about 0.2 seconds
-        sta SID_AD3                 ; voice 3 envelope
-        lda #$00                    ; sustain 0, release 0
-        sta SID_SR3                 ; voice 3 envelope part 2
-        sta SID_FREQ3L              ; a drum may have left a low byte behind
-        stx SID_FREQ3H              ; the pitch
-        lda #%00010000              ; triangle waveform, gate off (resets the envelope)
-        sta SID_CTRL3
-        lda #%00010001              ; triangle waveform, gate on
-        sta SID_CTRL3               ; gate 0 to 1 starts the note
-        lda #0
-        sta drum_idx                ; the drum that was playing stops (its table must not touch the voice)
-        lda #CHAP_TING_SFX          ; the drums keep quiet for a moment
-        sta sfx_timer
-        rts                         ; return to the caller
