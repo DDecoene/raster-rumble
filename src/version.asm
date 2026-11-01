@@ -5,5 +5,5 @@
 ; Every pull request to main must raise it (the workflow checks that).
 
 version_text
-        !scr "v0.0.1"               ; the version as screen codes (the 'v' is part of the text)
+        !scr "v0.0.2"               ; the version as screen codes (the 'v' is part of the text)
 VERSION_LEN = * - version_text      ; letters in the version text, '*' is the address where the assembler is now
