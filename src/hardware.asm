@@ -35,7 +35,7 @@ SPR2_X     = $d004                  ; sprite 2 X (low 8 bits); sprite n is at $d
 SPR2_Y     = $d005                  ; sprite 2 Y
 SPR7_X     = $d00e                  ; sprite 7 X position
 SPR7_Y     = $d00f                  ; sprite 7 Y position
-SPR_XHI    = $d010                  ; bit 8 of every sprite's X: bit 0 = ship, bit 1 = enemy (X can reach 343, one byte only 255)
+SPR_XHI    = $d010                  ; bit 8 of every sprite's X: bit 0 = ship, bit 1 = enemy, bit 7 = the Glitch (X can reach 343, one byte only 255)
 ; Switches and status
 SPR_ENABLE = $d015                  ; one bit per sprite: 1 = visible
 SPR_MULTI  = $d01c                  ; one bit per sprite: 1 = multicolor sprite
