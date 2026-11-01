@@ -1,5 +1,5 @@
 ; music.asm - the tune: the arpeggio on SID voice 2 (with a moving pulse width and a sweeping filter, for a synth sound)
-; a sawtooth bass on voice 1 that follows the chords, and drums on voice 3.
+; a sawtooth bass on voice 1 that follows the chords, and drums on voice 3. Voice 3 also plays the short sound effects (sfx_blip, sfx_ting, sfx_explosion).
 ; The tune runs at 100 Hz ("double speed", like the demo scene players): music_tick is called twice per frame.
 ; update_music is called once per frame and does the things that need no more than 50 Hz.
 
@@ -172,4 +172,62 @@ music_tick                          ; subroutine: one tick (10 ms): a new step o
         ldx #0                      ; yes: the drum is done (the voice keeps its last pitch and fades with its decay)
 +       stx drum_idx
 .done
+        rts                         ; return to the caller
+
+!zone sfx_blip
+sfx_blip                            ; subroutine: the short blip for a scored point, on voice 3 (the drum voice)
+        lda #$03                    ; attack 0, decay 3: a short blip
+        sta SID_AD3                 ; voice 3 envelope
+        lda #$00                    ; sustain 0 , release 0
+        sta SID_SR3                 ; voice 3 envelope part 2
+        lda #$00                    ; a drum may have left a low byte behind
+        sta SID_FREQ3L              ; voice 3 frequency, low byte
+        lda #$50                    ; a high pitch
+        sta SID_FREQ3H              ; voice 3 frequency
+        lda #%00010000              ; triangle waveform, gate off (resets the envelope)
+        sta SID_CTRL3               ; voice 3 stops
+        lda #%00010001              ; triangle waveform, gate on
+        sta SID_CTRL3               ; gate 0 to 1 starts the blip
+        lda #0
+        sta drum_idx                ; the drum that was playing stops (its table must not touch the voice)
+        lda #SFX_BLIP               ; the drums keep quiet for a moment
+        sta sfx_timer
+        rts                         ; return to the caller
+
+!zone sfx_ting
+sfx_ting                          ; subroutine: one bell-like note on voice 3, the pitch (SID frequency high byte) in X
+        lda #$06                    ; attack 0, decay 6: it rings for about 0.2 seconds
+        sta SID_AD3                 ; voice 3 envelope
+        lda #$00                    ; sustain 0, release 0
+        sta SID_SR3                 ; voice 3 envelope part 2
+        sta SID_FREQ3L              ; a drum may have left a low byte behind
+        stx SID_FREQ3H              ; the pitch
+        lda #%00010000              ; triangle waveform, gate off (resets the envelope)
+        sta SID_CTRL3
+        lda #%00010001              ; triangle waveform, gate on
+        sta SID_CTRL3               ; gate 0 to 1 starts the note
+        lda #0
+        sta drum_idx                ; the drum that was playing stops (its table must not touch the voice)
+        lda #CHAP_TING_SFX          ; the drums keep quiet for a moment
+        sta sfx_timer
+        rts                         ; return to the caller
+
+!zone sfx_explosion
+sfx_explosion                       ; subroutine: the noise rumble of a hit, on voice 3 (the drum voice)
+        lda #$09                    ; decay 9: the long rumble (the dodge blip uses a shorter one)
+        sta SID_AD3                 ; voice 3 envelope
+        lda #$00                    ; sustain 0 , release 0
+        sta SID_SR3                 ; voice 3 envelope part 2
+        lda #$00                    ; a drum may have left a low byte behind
+        sta SID_FREQ3L              ; voice 3 frequency, low byte
+        lda #$08                    ; low pitch for a crunchy noise
+        sta SID_FREQ3H              ; voice 3 frequency
+        lda #%10000000              ; noise waveform, gate off (this resets the envelope)
+        sta SID_CTRL3               ; voice 3 stops
+        lda #%10000001              ; noise waveform, gate on
+        sta SID_CTRL3               ; gate 0 to 1 starts the explosion sound
+        lda #0
+        sta drum_idx                ; the drum that was playing stops
+        lda #SFX_FRAMES             ; the drums keep quiet for a moment
+        sta sfx_timer
         rts                         ; return to the caller

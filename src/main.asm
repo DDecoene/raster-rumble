@@ -7,11 +7,13 @@
 ;   src/actors.asm     ship and enemy movement (9-bit X), spawning, homing, difficulty
 ;   src/score.asm      score and high score
 ;   src/starfield.asm  RAM character set, scrolling stars, random_column
-;   src/music.asm      the tune on SID voice 2
+;   src/music.asm      the tune on SID voice 2, and the sound effects on voice 3 (blip, ting, explosion)
 ;   src/title.asm      the title and game over screens and the any-key check
 ;   src/demo.asm       the demo effects of those screens: raster bars, bouncing letters, scroller
 ;   src/effects.asm    the game's demo effects: explosion burst, shake, parallax bands
+;   src/chapter.asm    the screen between two chapters of the story
 ;   src/data.asm       tables and text
+;   src/version.asm    the version number, shown on the title
 ;   src/sprites.asm    the ship and enemy shapes at $2000
 ;
 ; 6502 refresher:
@@ -60,6 +62,8 @@ start
         sta SPRITE_PTR              ; tell the VIC sprite 0 uses that shape
         lda #enemy_data / 64        ; enemy shape address divided by 64 = pointer value (129)
         sta SPRITE1_PTR             ; tell the VIC sprite 1 uses that shape
+        lda #glitch_data / 64       ; the Glitch shape address divided by 64 = pointer value (133)
+        sta SPRITE7_PTR             ; tell the VIC sprite 7 uses that shape
         lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 are multicolor
         sta SPR_MULTI               ; 12 fat pixels per row, 4 colours (including transparent) per sprite
         lda #COLOR_ORANGE           ; multicolor 0 is shared by all sprites
@@ -70,6 +74,8 @@ start
         sta SPR0_COLOR              ; sprite 0 (ship) hull is white
         lda #COLOR_RED              ; colour 2 = red
         sta SPR1_COLOR              ; sprite 1 (enemy) is red
+        lda #COLOR_GREEN            ; colour 5 = green
+        sta SPR7_COLOR              ; sprite 7 (the Glitch) is green
         lda #160                    ; start X: roughly the middle
         sta SPR0_X                  ; set ship X
         lda #$00                    ; bit 8 of every sprite X = 0
@@ -186,11 +192,16 @@ frame                               ; the game loop, runs once per screen refres
         lsr                         ; ... ends up in bit 0
         lsr                         ; (lsr alone on A shifts the accumulator)
         and #%00000001              ; 0 = frame A, 1 = frame B
+        tax                         ; keep the 0 or 1 safe in X, A is overwritten below
         asl                         ; times 2, because frame B shapes sit 2 blocks further on
         ora #sprite_data / 64       ; 128 for frame A, 130 for frame B: the ship pointer
         sta SPRITE_PTR              ; ship shape for this frame
         ora #1                      ; +1 gives 129 or 131: the enemy pointer
         sta SPRITE1_PTR             ; enemy shape for this frame
+        txa                         ; get the frame back into A
+        clc                         ; clear carry before adding
+        adc #glitch_data / 64       ; 133 for frame A, 134 for frame B: the Glitch pointer
+        sta SPRITE7_PTR             ; the Glitch shape for this frame
 
         jsr update_stars            ; scroll the starfield down
         jsr update_music            ; the synth sweeps (once per frame; the tune itself ticks inside game_bars, twice a frame)
@@ -240,56 +251,47 @@ frame                               ; the game loop, runs once per screen refres
         sta SPR1_Y                  ; store the new enemy Y
         cmp #MAX_Y                  ; has it reached the bottom?
         bcc +                       ; no (A < MAX_Y), carry on
-        jsr add_score               ; the enemy got past us: +1 point
-        jsr update_hiscore          ; if that beat the high score, it becomes the new one
-        lda #$03                    ; attack 0, decay 3: a short blip
-        sta SID_AD3                 ; voice 3 envelope
-        lda #$00                    ; sustain 0 , release 0
-        sta SID_SR3                 ; voice 3 envelope part 2
-        lda #$00                    ; a drum may have left a low byte behind
-        sta SID_FREQ3L              ; voice 3 frequency, low byte
-        lda #$50                    ; a high pitch
-        sta SID_FREQ3H              ; voice 3 frequency
-        lda #%00010000              ; triangle waveform, gate off (resets the envelope)
-        sta SID_CTRL3               ; voice 3 stops
-        lda #%00010001              ; triangle waveform, gate on
-        sta SID_CTRL3               ; gate 0 to 1 starts the blip
-        lda #0
-        sta drum_idx                ; the drum that was playing stops (its table must not touch the voice)
-        lda #SFX_BLIP               ; the drums keep quiet for a moment
-        sta sfx_timer
+        jsr score_point             ; the enemy got past us: +1 point, the high score check and the blip
         lda #DODGE_FLASH            ; the bars flash gold
         sta dodge_flash
         jsr count_dodge             ; every 10 dodges the enemy speeds up
+        inc chapter_dodges          ; one more dodge in this chapter
+        lda chapter_dodges          ; load it to compare
+        cmp #CHAPTER_DODGES         ; enough to finish the chapter?
+        bcc same_chapter            ; no, carry on (a named label: the '+' labels around here are already taken by other branches)
+        lda #0                      ; yes: start counting again ...
+        sta chapter_dodges          ; ... from 0
+        lda chapter                 ; the current chapter
+        cmp #CHAPTERS - 1           ; already in the last one?
+        bcs same_chapter            ; yes: the ending is not built yet, so the game just carries on
+        inc chapter                 ; the next chapter (23:00 becomes 01:00)
+        jsr chapter_screen          ; show its time and sentence, then back to the game
+        lda chapter                 ; chapter_screen switched the sprites back to ship + enemy only, so ...
+        cmp #1                      ; ... in chapter 1 (01:00) the Glitch joins now, after that screen
+        bne same_chapter            ; (later chapters keep the Glitch that is already falling)
+        jsr start_glitch
+same_chapter
         jsr spawn_enemy             ; respawn it at the top
 +
-        lda SPR_COLL                ; which sprites touched? (reading also clears the register)
-        and #%00000011              ; keep only the bits of the ship and the enemy
+        jsr move_glitch             ; the Glitch falls too (does nothing until chapter 1)
+        lda SPR_COLL               ; which sprites touched? (reading also clears the register, so read it once)
+        sta fx_tmp                  ; keep a copy: we test it twice
+        and #%00000011              ; the bits of the ship and the enemy
         cmp #%00000011              ; are both set, so do they overlap?
+        beq ship_hit                ; yes, a hit
+        lda fx_tmp                  ; no: what about the ship and the Glitch?
+        and #%10000001              ; bit 7 = Glitch, bit 0 = ship
+        cmp #%10000001              ; both set?
         bne +                       ; no, no hit
-        lda exp_timer               ; the burst sprites touch the ship too: while an explosion runs no new hit counts
+ship_hit
+        lda exp_timer              ; the burst sprites touch the ship too: while an explosion runs no new hit counts
         bne +
         lda #COLOR_RED              ; hit! red
         sta VIC_BORDER              ; flash the border
         lda #HIT_FRAMES             ; how long to flash
         sta hit_timer               ; start the flash timer
-        lda #$09                    ; decay 9: the long rumble (the dodge blip uses a shorter one)
-        sta SID_AD3                 ; voice 3 envelope
-        lda #$00                    ; sustain 0 , release 0
-        sta SID_SR3                 ; voice 3 envelope part 2
-        lda #$00                    ; a drum may have left a low byte behind
-        sta SID_FREQ3L              ; voice 3 frequency, low byte
-        lda #$08                    ; low pitch for a crunchy noise
-        sta SID_FREQ3H              ; voice 3 frequency
-        lda #%10000000              ; noise waveform, gate off (this resets the envelope)
-        sta SID_CTRL3               ; voice 3 stops
-        lda #%10000001              ; noise waveform, gate on
-        sta SID_CTRL3               ; gate 0 to 1 starts the explosion sound
-        lda #0
-        sta drum_idx                ; the drum that was playing stops
-        lda #SFX_FRAMES             ; the drums keep quiet for a moment
-        sta sfx_timer
-        jsr start_explosion         ; a burst of sprites from the enemy, shake and fire bars
+        jsr sfx_explosion           ; the long noise rumble on voice 3
+        jsr start_explosion         ; a burst of sprites from the ship, shake and fire bars
         dec lives                   ; a hit costs a life (the score and the speed stay)
         jsr draw_lives              ; show it
         lda lives                   ; any left?
@@ -306,7 +308,11 @@ frame                               ; the game loop, runs once per screen refres
         jsr reset_ship              ; ... and the ship in its start position
 life_left
         jsr spawn_enemy             ; send the enemy back to the top
-        lda SPR_COLL                ; clear the collision register
+        lda glitch_active           ; is there a Glitch?
+        beq no_glitch               ; no (chapter 0, or game over just reset it)
+        jsr spawn_glitch            ; yes: it goes back to the top too, and slow again
+no_glitch
+        lda SPR_COLL               ; clear the collision register
 +
         lda hit_timer               ; is the border flashing?
         beq +                       ; no, nothing to do
@@ -329,5 +335,7 @@ life_left
         !source "src/title.asm"     ; the title screen and the any-key check
         !source "src/demo.asm"      ; raster bars, bouncing letters, scroller
         !source "src/effects.asm"   ; explosion burst, shake, parallax bands of the game
+        !source "src/chapter.asm"   ; the screen between two chapters of the story
         !source "src/data.asm"      ; tables and text
+        !source "src/version.asm"   ; the version number
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000

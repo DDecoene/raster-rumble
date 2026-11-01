@@ -58,6 +58,25 @@ over_text
         !scr "  game over  "        ; 13 letters like the title, so both use the same bouncing code
 restart_text
         !scr "push any key to restart" ; 23 letters, RESTART_LEN
+chapter_time                        ; the time of each chapter, 5 letters each, so chapter * 5 is the offset
+        !scr "23:00"                ; chapter 0
+        !scr "01:00"                ; chapter 1
+        !scr "03:00"                ; chapter 2
+        !scr "04:30"                ; chapter 3
+        !scr "06:00"                ; chapter 4
+        !scr "07:00"                ; chapter 5
+!macro chapter_line .t {            ; ACME macro: one sentence, padded with spaces up to CHAPTER_LEN letters
+.start                              ; (so every sentence is exactly as long and chapter * CHAPTER_LEN is the offset)
+        !scr .t                     ; the sentence as screen codes
+        !fill CHAPTER_LEN - (* - .start), $20 ; fill up with spaces; a sentence that is too long gives an error
+}
+chapter_text                        ; the sentence of each chapter, CHAPTER_LEN (32) letters each, so chapter * 32 is the offset
+        +chapter_line "someone forgot to switch me off."    ; chapter 0
+        +chapter_line "a glitch. slow, harmless. a lie."    ; chapter 1
+        +chapter_line "the screen edge is wearing thin."    ; chapter 2
+        +chapter_line "old programs wake in the dark."      ; chapter 3
+        +chapter_line "the beam that draws me hunts me."    ; chapter 4
+        +chapter_line "save your name before dawn."         ; chapter 5
 title_text
         !scr "raster rumble"        ; 13 letters, TITLE_LEN
 sub_text
@@ -98,16 +117,16 @@ over_scroll
         !byte $ff                   ; end marker
 
 ; Game effects tables
-burst_dx                            ; the 6 burst particles fly out in a star: sideways speed (signed) ...
-        !byte 4, 2, -2, -4, -2, 2
+burst_dx                            ; the 5 burst particles fly out in a star: sideways speed (signed) ...
+        !byte 0, 4, 2, -2, -4
 burst_dy                            ; ... and vertical speed
-        !byte 0, 3, 3, 0, -3, -3
+        !byte -4, -1, 3, 3, -1
 part_cols                           ; the colours the particles cycle through: white yellow orange red
         !byte 1, 7, 8, 2
-bit_tab                             ; the bit of sprite 2 to 7 in $d015 and $d010
-        !byte %00000100, %00001000, %00010000, %00100000, %01000000, %10000000
+bit_tab                             ; the bit of sprite 2 to 6 in $d015 and $d010
+        !byte %00000100, %00001000, %00010000, %00100000, %01000000
 nbit_tab                            ; the same, inverted
-        !byte %11111011, %11110111, %11101111, %11011111, %10111111, %01111111
+        !byte %11111011, %11110111, %11101111, %11011111, %10111111
 shake_mask                          ; shake size by explosion age (exp_timer / 4): none at the end, wild at the start
         !byte 0, 1, 1, 3, 3, 3, 7, 7
 ; Parallax: how far each band shifts for a ship X / 8 of 0 to 40 (far stars little, near stars a lot, all opposite to the ship)

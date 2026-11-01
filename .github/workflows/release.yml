@@ -1,0 +1,43 @@
+# When something lands on main (only possible through a pull request from dev): build, tag and release.
+# The release gets the .prg (emulators, Kung Fu Flash, Ultimate) and the .d64 (disk image, SD2IEC, Ultimate, emulators).
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # needed to create the tag and the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the assembler and c1541 (the disk image tool, part of VICE)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends acme vice
+
+      - name: Build the release files
+        run: make dist
+
+      - name: Show what is on the disk image
+        run: c1541 build/raster-rumble.d64 -list
+
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(tools/version.sh)
+          if [ -z "$version" ]; then
+            echo "::error::No version found in src/version.asm"
+            exit 1
+          fi
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "::error::Release v$version already exists, raise the version in src/version.asm"
+            exit 1
+          fi
+          gh release create "v$version" build/dist/* \
+            --target "$GITHUB_SHA" \
+            --title "raster rumble v$version (alpha)" \
+            --generate-notes

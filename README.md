@@ -2,7 +2,9 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
+**Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far.
+
+A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge. After ten dodges a chapter screen opens and the Glitch, a second falling enemy that suddenly speeds up, joins in.
 
 ## Tools
 
@@ -30,26 +32,66 @@ The game runs in the vc64web browser emulator:
 
 The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`. It also changes the emulator a little as it serves it: it adds a small loader that fetches the newest build once the emulator runs (the emulator's own load-from-address feature did not work in every browser) and puts the keyboard on joystick port 2, and it replaces the offline cache that would keep serving an old build. So there is nothing to upload. After a change, run `make test` again, or `make` and reload the page. `make test` waits until the server answers before it opens the browser. The server keeps running in the background until you run `make stop`.
 
+#### The dodging bot
+
+`tools/bot.js` plays the game for you, to reach later chapters without playing by hand. Paste it into the browser console of the emulator page (or load it with a test tool), then use `bot.start()`, `bot.status()` and `bot.stop()`. It reads the sprite positions from the emulated C64 and steers with the arrow keys, walking to the spot on the screen that is farthest from the falling things (the enemy, and the Glitch once it is active). On the title and game over screens it taps Space, so it plays on after a game over. To test hits it can ram instead of dodge: `bot.start('enemy')` or `bot.start('glitch')` flies into that one (`'glitch'` dodges the enemy until the Glitch is in the game). In that mode it ignores the other falling thing, so that one hits too now and then. It only moves left and right and does not always survive: the status shows `best`, `maxChapter` and `games`.
+
 ### Joystick readout
 
 To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: the five digits on the top row are up, down, left, right and fire (0 = pressed).
 
 To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu Flash, Ultimate 64 or similar.
 
+## The story
+
+The game tells *The Night of the Raster Beam*. It is 1986 and a kid forgot to switch off the Commodore 64. Inside lives Pixel, a small ship. The Raster Beam that draws the screen has started to stutter, and at 07:00 someone will pull the plug. Pixel has until morning to write its name to the floppy disk, the only place that survives the power cut. Every hour of the night is a chapter, and a chapter screen with the time and one sentence shows between them.
+
+| Time | Chapter | Playable |
+|---|---|---|
+| 23:00 | Boot | yes |
+| 01:00 | The Glitch | yes |
+| 03:00 | The Border | not yet |
+| 04:30 | The Memory | not yet |
+| 06:00 | The Raster Beam | not yet |
+| 07:00 | The Disk | not yet |
+
+The full story and the plans per chapter are in `docs/story.md`.
+
+## Releases
+
+The latest build is always on the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): `raster-rumble-vX.Y.Z.prg` (emulators, Kung Fu Flash, Ultimate) and `raster-rumble-vX.Y.Z.d64` (disk image). We are in alpha, so versions are `0.0.x`.
+
+How it works:
+
+- The version lives in `src/version.asm` (`!scr "v0.0.1"`) and is shown on the title screen. `make version` prints it.
+- `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or that does not build.
+- When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
+- So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
+- `make d64` and `make dist` (the release files in `build/dist`) do the same locally. They need `c1541`: `brew install vice`.
+
+One-time GitHub setup (Settings, Branches, rule for `main`): require a pull request before merging, require the status check `check` (the job of `pr-check.yml`), and include administrators, so nobody can push to `main` directly.
+
 ## Project layout
 
+    LICENSE               CC BY-NC-SA 4.0
+    CONTRIBUTING.md       how to contribute, and who owns a contribution
     src/main.asm          startup code and the main loop, includes everything else
     src/hardware.asm      names for the VIC, SID and CIA registers, colours, fixed memory areas
     src/config.asm        difficulty settings, screen layout, zero page and RAM variable addresses
     src/actors.asm        ship and enemy: 9-bit X movement, spawning, homing, difficulty
     src/score.asm         score and high score
     src/starfield.asm     RAM character set, scrolling stars, random_column
-    src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1
+    src/music.asm         the tune: synth arpeggio on SID voice 2, bass on voice 1, sound effects on voice 3
     src/title.asm         the title and game over screens and the any-key check
     src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
+    src/chapter.asm       the screen between two chapters of the story (see docs/story.md)
     src/data.asm          tables and text (star data, note tables, labels)
+    src/version.asm       the version number (the one place it lives), shown on the title screen
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
+    tools/bot.js          dodging bot for test runs in the browser emulator
+    tools/version.sh      prints the version from src/version.asm (Makefile and workflows use it)
+    .github/workflows/    pr-check.yml checks pull requests to main, release.yml builds and publishes a release
     project-config.json   VS64 project settings (toolkit: acme)
     .vscode/              build task, test task, launch config
     Makefile              command-line build
@@ -120,7 +162,7 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 - Voice 2: the music, a 32 note A minor, F, C, G arpeggio on a plucked pulse wave (decay 6, short). Every frame `update_music` also moves the pulse width (a sine, 4 to 11) and the filter cutoff (`$d416`, a slow sine from 24 to 87, one turn per 256 frames) with a resonant low-pass filter on this voice only, which gives the synth sound. `update_music` plays a new note every `MUSIC_FRAMES` frames from the `music_lo` and `music_hi` tables (PAL SID frequency values).
 - Double speed: the tune runs at 100 Hz. `music_tick` is called twice per frame (game: inside `game_bars`, at raster line 54 and line 210; title: inside `raster_show`, at line 54 and after the bars), `update_music` once (synth sweeps, `sfx_timer`). A step is `MUSIC_TICKS` (7) ticks, a 16th note; the arpeggio plays on even steps, the bass on steps 0 and 8 of a chord, drums on any step (`drum_pat`, 16 per bar).
 - Hard restart: one tick before a note the voice gets gate off and AD/SR 0, so the envelope is empty when the note starts (avoids the SID ADSR bug). Voice 2 does it for every note, the bass for its notes (unless an effect owns voice 1), the drum voice before each drum (this also stops the old drum's table).
-- Voice 3: the drums, and the sound effects (a short triangle blip for each dodge, a noise explosion on a hit, set up in `main.asm`). An effect sets `sfx_timer` (`$1d`, `SFX_BLIP` or `SFX_FRAMES` frames) and stops the drum table; until it runs out no new drum starts, so the effect is never cut short. Only a few drum hits are lost, the melody stays. Voice 3 is table driven for the drums. `drum_pat` gives one drum per step (0 none, 1 kick, 2 snare, 3 hat): kick on 0, 8, 10, hat on 6 and 14 (no snare: the user did not like it; its table is there). Each drum has `DRUM_LEN` (14) entries per table, one per tick: `drum_fhi`/`drum_flo` the pitch and `drum_ctrl` a new waveform with gate on (0 = keep). `drum_ad` is the envelope. Noise must never be combined with another waveform (it locks and goes silent). The kick: 2 ticks of noise click at 1.4 kHz, then a triangle falling from 366 Hz to 60 Hz in 5 ticks (the shape came from the user, now at 100 Hz resolution). The hat is high noise rising a little, the snare noise that gets darker.
+- Voice 3: the drums, and the sound effects (a short triangle blip for every scored point, from `score_point` in `score.asm` (it adds the point, checks the high score and calls `sfx_blip` in `music.asm`, for the enemy and for the Glitch alike), a noise explosion on a hit, `sfx_explosion` in `music.asm`, called from the hit code in `main.asm`; and the two rising bell notes "ting ting" when a chapter screen opens, `sfx_ting` in `music.asm`, called by `chapter_screen` on frame 0 and frame `CHAP_TING_GAP`). An effect sets `sfx_timer` (`$1d`, `SFX_BLIP` or `SFX_FRAMES` frames) and stops the drum table; until it runs out no new drum starts, so the effect is never cut short. Only a few drum hits are lost, the melody stays. Voice 3 is table driven for the drums. `drum_pat` gives one drum per step (0 none, 1 kick, 2 snare, 3 hat): kick on 0, 8, 10, hat on 6 and 14 (no snare: the user did not like it; its table is there). Each drum has `DRUM_LEN` (14) entries per table, one per tick: `drum_fhi`/`drum_flo` the pitch and `drum_ctrl` a new waveform with gate on (0 = keep). `drum_ad` is the envelope. Noise must never be combined with another waveform (it locks and goes silent). The kick: 2 ticks of noise click at 1.4 kHz, then a triangle falling from 366 Hz to 60 Hz in 5 ticks (the shape came from the user, now at 100 Hz resolution). The hat is high noise rising a little, the snare noise that gets darker.
 
 ### Joystick and the keyboard
 
@@ -176,5 +218,14 @@ These constants in `src/config.asm` change the difficulty without touching the l
 ### Game effects (src/effects.asm, game_bars in src/demo.asm)
 
 - **Plasma behind the playfield.** A real 2D text mode plasma in dark blue, in the 24 rows under the score, drawn in extended colour mode (ECM, bit 6 of `$d011`): every cell has its own background colour, picked by bits 6 and 7 of its screen code from `$d021` (black) and `$d022` (the plasma colour, `VIC_BG1`). That is also why stars can sit on the plasma without a black box around them: a star gets the background bits of the cell it is in. ECM only has 64 characters, so the star shapes live at screen codes 33 to 40 (`STAR_CHAR`) and the two dither patterns at 41 (sparse) and 42 (checkerboard); the title screens do not use those codes. The value of a cell is the sum of three sine waves, as in the classic plasma: a horizontal one per column (`PLASMA_COLX`, once per frame in `plasma_prep`), a vertical one per row (`plasma_rowv`, once per row) and a diagonal one (`dtab`, period 32, read at x + row + phase). The sum (0 to 189) picks a screen code from `plasma_code` (black, sparse dots, checkerboard, or the plasma colour as background) and a colour for the dots from `plasma_ramp`; below 110 it is black, so only the peaks show. The inner loop of `plasma_step` patches its own addresses (self-modifying code) per row. `game_bars` colours 4 rows per frame between the music ticks and scroll bands, so the whole plasma is renewed every 6 frames. A star remembers the code and colour that were in its cell (`star_ucode`, `star_ucol`) and puts them back when it moves on; `plasma_step` redraws the stars of its row. A star inside a dithered cell gets a plain cell (one background colour per cell). `plasma_init` colours all rows at once after the title and game over screens and switches ECM on; `reset_scroll` switches it off for those screens. Moods: nebula, fire during an explosion, a glow just after a dodge (`ramp_lo`/`ramp_hi`, `mood_bg1`). To make it dimmer, raise the 110, 125, 140, 160 thresholds in `plasma_code` and `plasma_ramp` (`data.asm`).
-- **Explosion.** On a hit `start_explosion` launches 6 sprites (2 to 7, a round dot at `$2100`) from the enemy in a star shape. `update_particles` moves them (9-bit X in `PART_LO`/`PART_HI` at `$c600`, switches a sprite off when it leaves the screen) and cycles white, yellow, orange, red. For `EXP_FRAMES` (28) frames the screen shakes: `update_bands` writes a random vertical scroll to `$d011` (below the playfield, where the VIC does not mind) and adds a random horizontal shake to the bands, with `shake_mask` making it smaller as the explosion ages. While `exp_timer` runs no new hit counts (the particles also set the sprite collision bits), a short grace period.
+- **Explosion.** On a hit `start_explosion` launches 5 sprites (2 to 6, a round dot at `$2100`) from the ship in a star shape. `update_particles` moves them (9-bit X in `PART_LO`/`PART_HI` at `$c600`, switches a sprite off when it leaves the screen) and cycles white, yellow, orange, red. For `EXP_FRAMES` (28) frames the screen shakes: `update_bands` writes a random vertical scroll to `$d011` (below the playfield, where the VIC does not mind) and adds a random horizontal shake to the bands, with `shake_mask` making it smaller as the explosion ages. While `exp_timer` runs no new hit counts (the particles also set the sprite collision bits), a short grace period.
+- **The Glitch (chapter 1 and later).** A second falling enemy on sprite 7: a green microchip in two hi-res frames (`glitch_data`/`glitch_data_b`, pointers 133/134, flickering every 8 frames). It appears when chapter 1 begins: `main.asm` calls `start_glitch` right after `chapter_screen` (the chapter screen switches all sprites off and back on, so it must come after). `start_glitch` sets `glitch_active` (`$33`), spawns it at a random X with `spawn_glitch` (which uses `pick_x`, shared with `spawn_enemy`) and sets bit 7 of `$d015`. `move_glitch` runs every frame: it falls slowly (`GLITCH_SLOW`) for `GLITCH_WAIT` frames (`glitch_timer`, `$34`), then fast (`GLITCH_FAST`), and gives +1 point when it reaches the bottom. A hit by the ship (`$d01e` `%10000001`) costs a life like the enemy does, and afterwards both respawn at the top. `reset_difficulty` clears `glitch_active`, so a new game starts without it. The explosion only uses sprites 2 to 6 so that sprite 7 stays the Glitch, and `update_particles` and `chapter_screen` keep bit 7 of `$d015` on while it is active.
 - **Parallax bands.** The playfield is split in three bands (rows 1 to 6, 7 to 14, 15 to 24; the score row never moves). Each band has its own horizontal fine scroll (`$d016`, `band1` to `band3`, set at lines `BAND1_LINE` to `BAND3_LINE` by `game_bars`), 0 to 2, 0 to 4 and 0 to 7 pixels, from the ship X (`par_far`, `par_mid`, `par_near`): the stars lean the other way when you fly, the near ones most.
+
+## Contributing and license
+
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md) (pull requests go to `dev`).
+
+The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license.
+
+I have no intention of selling this game, but I do not want anyone else to sell it either. That is why the license is non-commercial, and why contributions are handed over to me: it keeps the whole project under one owner, free to play for everyone and protected from commercial use.

@@ -1,9 +1,8 @@
 ; actors.asm - the ship and the enemy: 9-bit X movement, spawning, homing and difficulty
 
-!zone spawn_enemy
-spawn_enemy                         ; subroutine: enemy to the top, random X anywhere in the visible range
-        lda #MIN_Y - 10             ; just above the visible area, so it slides in
-        sta SPR1_Y                  ; set enemy Y
+!zone pick_x
+pick_x                              ; subroutine: pick a random X anywhere in the visible range
+                                    ; result: xhi:xlo (9 bits), nothing is written to the hardware
         jsr random_column           ; A = 0 to 39
         cmp #37                     ; we want 0 to 36 so the enemy stays fully on screen
         bcc .ok                     ; already in range
@@ -33,7 +32,15 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         bcc .noc2                   ; no overflow
         inc xhi                     ; overflow: high byte + 1
 .noc2
-        sta SPR1_X                  ; low 8 bits of the enemy X (A still holds xlo)
+        rts                         ; return: the caller reads xlo and xhi
+
+!zone spawn_enemy
+spawn_enemy                         ; subroutine: enemy to the top, random X anywhere in the visible range
+        lda #MIN_Y - 10             ; just above the visible area, so it slides in
+        sta SPR1_Y                  ; set enemy Y
+        jsr pick_x                  ; xhi:xlo = random X
+        lda xlo                     ; low 8 bits of the enemy X
+        sta SPR1_X                  ; set enemy X
         lda SPR_XHI                 ; bit 8 of all sprites
         and #%11111101              ; clear the enemy's bit (bit 1)
         ldx xhi                     ; is X 256 or more?
@@ -41,6 +48,55 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         ora #%00000010              ; yes, set the enemy's bit 8
 .store
         sta SPR_XHI                 ; write it back
+        rts                         ; return to the caller
+
+!zone spawn_glitch
+spawn_glitch                        ; subroutine: Glitch to the top, random X anywhere in the visible range
+        lda #MIN_Y - 10             ; just above the visible area, so it slides in
+        sta SPR7_Y                  ; set glitch Y
+        jsr pick_x                  ; xhi:xlo = random X
+        lda xlo                     ; low 8 bits of the glitch X
+        sta SPR7_X                  ; set glitch X
+        lda SPR_XHI                 ; bit 8 of all sprites
+        and #%01111111              ; clear the Glitch's bit (bit 7)
+        ldx xhi                     ; is X 256 or more?
+        beq .store                  ; no, bit stays clear
+        ora #%10000000              ; yes, set the Glitch's bit 8
+.store
+        sta SPR_XHI                 ; write it back
+        lda #0                      ; a new Glitch starts with the slow fall again
+        sta glitch_timer            ; so reset the frame counter
+        rts                         ; return to the caller
+
+!zone move_glitch
+move_glitch                         ; subroutine: let the Glitch fall: slow for GLITCH_WAIT frames, then fast
+        lda glitch_active           ; is there a Glitch at all (chapter 1 or later)?
+        beq .done                   ; no, nothing to do
+        lda #GLITCH_FAST            ; assume the fast fall ...
+        ldx glitch_timer            ; ... unless it has not fallen slowly long enough yet
+        cpx #GLITCH_WAIT            ; timer compared to the wait time
+        bcs .fall                   ; timer >= wait: stay with the fast speed
+        inc glitch_timer            ; one more slow frame (it stops counting at GLITCH_WAIT: a byte would wrap at 256)
+        lda #GLITCH_SLOW            ; the slow speed instead
+.fall
+        clc                         ; clear carry before adding
+        adc SPR7_Y                  ; Y + speed
+        sta SPR7_Y                  ; store the new Glitch Y
+        cmp #MAX_Y                  ; has it reached the bottom?
+        bcc .done                   ; no (A < MAX_Y), carry on next frame
+        jsr score_point             ; the Glitch got past us: +1 point, the high score check and the blip
+        jsr spawn_glitch            ; back to the top, and slow again
+.done
+        rts                         ; return to the caller
+
+!zone start_glitch
+start_glitch                        ; subroutine: the Glitch enters the game (called once, when chapter 1 begins)
+        lda #1
+        sta glitch_active           ; move_glitch starts working
+        jsr spawn_glitch            ; it starts at the top, at a random X
+        lda SPR_ENABLE              ; switch sprite 7 on, and leave the other bits alone
+        ora #%10000000              ; bit 7 = the Glitch
+        sta SPR_ENABLE
         rts                         ; return to the caller
 
 !zone ship_left
@@ -139,7 +195,11 @@ reset_difficulty                    ; subroutine: back to the slow start speed
         sta enemy_speed             ; set it
         lda #0                      ; A = 0
         sta dodge_count             ; no dodges counted yet
-        rts                         ; return to the caller
+        sta chapter                 ; back to the first chapter (23:00), A is still 0
+        sta chapter_dodges          ; no dodges counted in this chapter yet
+        sta glitch_active           ; no Glitch until chapter 1 (move_glitch does nothing while this is 0)
+        sta glitch_timer            ; and its timer holds garbage at boot, so clear it too
+        rts                        ; return to the caller
 
 reset_ship                          ; subroutine: ship back to the start position
         lda #160                    ; start X: roughly the middle

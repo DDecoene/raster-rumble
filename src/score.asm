@@ -104,3 +104,9 @@ draw_lives                          ; subroutine: print the lives digit
         ora #$30                    ; turn the number into a character
         sta LIVES_POS               ; print it
         rts                         ; return to the caller
+
+!zone score_point
+score_point                         ; subroutine: every scored point goes through here: score + 1, the high score check and the blip sound
+        jsr add_score               ; +1 point
+        jsr update_hiscore          ; if that beat the high score, it becomes the new one
+        jmp sfx_blip                ; play the blip (sfx_blip returns to our caller)
