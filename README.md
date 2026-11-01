@@ -30,6 +30,10 @@ The game runs in the vc64web browser emulator:
 
 The first run clones the emulator into `tools/vc64web` (about 26 MB, ignored by git). `tools/serve.py` serves the emulator at `/` and the newest build at `/game/raster-rumble.prg`. It also changes the emulator a little as it serves it: it adds a small loader that fetches the newest build once the emulator runs (the emulator's own load-from-address feature did not work in every browser) and puts the keyboard on joystick port 2, and it replaces the offline cache that would keep serving an old build. So there is nothing to upload. After a change, run `make test` again, or `make` and reload the page. `make test` waits until the server answers before it opens the browser. The server keeps running in the background until you run `make stop`.
 
+#### The dodging bot
+
+`tools/bot.js` plays the game for you, to reach later chapters without playing by hand. Paste it into the browser console of the emulator page (or load it with a test tool), then use `bot.start()`, `bot.status()` and `bot.stop()`. It reads the sprite positions from the emulated C64 and steers with the arrow keys, walking to the spot on the screen that is farthest from the falling things (the enemy, and the Glitch once it is active). On the title and game over screens it taps Space, so it plays on after a game over. It only moves left and right and does not always survive: the status shows `best`, `maxChapter` and `games`.
+
 ### Joystick readout
 
 To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: the five digits on the top row are up, down, left, right and fire (0 = pressed).
@@ -51,6 +55,7 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/data.asm          tables and text (star data, note tables, labels)
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
+    tools/bot.js          dodging bot for test runs in the browser emulator
     project-config.json   VS64 project settings (toolkit: acme)
     .vscode/              build task, test task, launch config
     Makefile              command-line build
