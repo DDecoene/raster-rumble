@@ -48,8 +48,49 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         ora #%00000010              ; yes, set the enemy's bit 8
 .store
         sta SPR_XHI                 ; write it back
-        lda #0                      ; for now every enemy falls straight down (chapter 2 will pick a direction here)
+        lda #0                      ; most of the time the enemy falls straight down
         sta enemy_dx
+        lda chapter                 ; but from chapter 2 (The Border) on, some enemies drift sideways
+        cmp #2
+        bcc .done                   ; chapters 0 and 1: always straight down
+        jsr random_byte             ; A = a random byte
+        and #%00000011              ; 0 to 3: a fair four-sided die
+        cmp #2
+        bcc .done                   ; 0 or 1: straight down (half of them)
+        beq .right                  ; 2: drift right
+        lda #$ff                    ; 3: drift left (-1)
+        sta enemy_dx
+        rts
+.right
+        lda #1
+        sta enemy_dx
+.done
+        rts                         ; return to the caller
+
+!zone bounce_enemy
+bounce_enemy                        ; subroutine: a drifting enemy that reaches the left or right edge turns around
+        lda enemy_dx
+        beq .done                   ; straight down: nothing to bounce
+        bmi .left                   ; negative: it is drifting left
+        lda SPR_XHI                 ; drifting right: bit 8 of the enemy X is bit 1
+        and #%00000010
+        beq .done                   ; X is below 256: the right edge is far away
+        lda SPR1_X                  ; low byte (X = 256 + low byte)
+        cmp #MAX_X - 256            ; at the right edge?
+        bcc .done                   ; not yet
+        lda #$ff                    ; turn around: now drifting left
+        sta enemy_dx
+        rts
+.left
+        lda SPR_XHI
+        and #%00000010
+        bne .done                   ; X is 256 or more: the left edge is far away
+        lda SPR1_X
+        cmp #MIN_X + 1              ; carry set when X > MIN_X
+        bcs .done                   ; not at the left edge yet
+        lda #1                      ; turn around: now drifting right
+        sta enemy_dx
+.done
         rts                         ; return to the caller
 
 !zone spawn_glitch

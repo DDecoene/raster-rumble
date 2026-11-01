@@ -253,6 +253,7 @@ frame                               ; the game loop, runs once per screen refres
 drift_left
         jsr enemy_left              ; $ff: one pixel left
 no_drift
+        jsr bounce_enemy            ; at the left or right edge a drifting enemy turns around
         lda SPR1_Y                  ; current enemy Y
         clc                         ; clear carry before adding
         adc enemy_speed             ; fall as fast as the current level allows
