@@ -250,24 +250,7 @@ frame                               ; the game loop, runs once per screen refres
         sta SPR1_Y                  ; store the new enemy Y
         cmp #MAX_Y                  ; has it reached the bottom?
         bcc +                       ; no (A < MAX_Y), carry on
-        jsr add_score               ; the enemy got past us: +1 point
-        jsr update_hiscore          ; if that beat the high score, it becomes the new one
-        lda #$03                    ; attack 0, decay 3: a short blip
-        sta SID_AD3                 ; voice 3 envelope
-        lda #$00                    ; sustain 0 , release 0
-        sta SID_SR3                 ; voice 3 envelope part 2
-        lda #$00                    ; a drum may have left a low byte behind
-        sta SID_FREQ3L              ; voice 3 frequency, low byte
-        lda #$50                    ; a high pitch
-        sta SID_FREQ3H              ; voice 3 frequency
-        lda #%00010000              ; triangle waveform, gate off (resets the envelope)
-        sta SID_CTRL3               ; voice 3 stops
-        lda #%00010001              ; triangle waveform, gate on
-        sta SID_CTRL3               ; gate 0 to 1 starts the blip
-        lda #0
-        sta drum_idx                ; the drum that was playing stops (its table must not touch the voice)
-        lda #SFX_BLIP               ; the drums keep quiet for a moment
-        sta sfx_timer
+        jsr score_point             ; the enemy got past us: +1 point, the high score check and the blip
         lda #DODGE_FLASH            ; the bars flash gold
         sta dodge_flash
         jsr count_dodge             ; every 10 dodges the enemy speeds up

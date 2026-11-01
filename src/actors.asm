@@ -84,8 +84,7 @@ move_glitch                         ; subroutine: let the Glitch fall: slow for 
         sta SPR7_Y                  ; store the new Glitch Y
         cmp #MAX_Y                  ; has it reached the bottom?
         bcc .done                   ; no (A < MAX_Y), carry on next frame
-        jsr add_score               ; the Glitch got past us: +1 point
-        jsr update_hiscore          ; if that beat the high score, it becomes the new one
+        jsr score_point             ; the Glitch got past us: +1 point, the high score check and the blip
         jsr spawn_glitch            ; back to the top, and slow again
 .done
         rts                         ; return to the caller
