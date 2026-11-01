@@ -1,33 +1,14 @@
-NAME   = raster-rumble
+NAME   = sandbox
 SRC    = src/main.asm
 OUT    = build/$(NAME).prg
-D64    = build/$(NAME).d64
-# the version, read from src/version.asm (that file is the one place it lives)
-VERSION = $(shell tools/version.sh)
 
-.PHONY: all clean emu serve test stop version d64 dist
+.PHONY: all clean emu serve test stop
 
 all: $(OUT)
 
 $(OUT): $(wildcard src/*.asm)
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/$(NAME).lbl -r build/$(NAME).rpt -o $@ $(SRC)
-
-# print the version
-version:
-	@echo $(VERSION)
-
-# a disk image with the game on it (needs c1541, it comes with VICE: brew install vice)
-$(D64): $(OUT)
-	c1541 -format "raster rumble,rr" d64 $@ -write $(OUT) "raster rumble"
-
-d64: $(D64)
-
-# the files of a release, with the version in their names, in build/dist
-dist: $(OUT) $(D64)
-	@mkdir -p build/dist
-	cp $(OUT) build/dist/$(NAME)-v$(VERSION).prg
-	cp $(D64) build/dist/$(NAME)-v$(VERSION).d64
 
 # the vc64web browser emulator, fetched once into tools/vc64web (about 26 MB, not part of the repo)
 tools/vc64web:
@@ -39,7 +20,7 @@ emu: tools/vc64web
 serve: $(OUT) tools/vc64web
 	python3 tools/serve.py 8000
 
-# build, (re)start the server so it always runs the current tools/serve.py, open the game in the browser emulator
+# build, (re)start the server, open the program in the browser emulator
 test: $(OUT) tools/vc64web
 	@pkill -f tools/serve.py || true
 	@(nohup python3 tools/serve.py 8000 > /dev/null 2>&1 &)

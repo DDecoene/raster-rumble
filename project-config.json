@@ -1,6 +1,6 @@
 {
-    "name": "raster-rumble",
-    "description": "A Commodore 64 game in 6502 assembly",
+    "name": "sandbox",
+    "description": "My own C64 experiments in 6502 assembly",
     "toolkit": "acme",
     "main": "src/main.asm",
     "build": "debug",
