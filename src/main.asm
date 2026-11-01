@@ -289,23 +289,8 @@ ship_hit
         sta VIC_BORDER              ; flash the border
         lda #HIT_FRAMES             ; how long to flash
         sta hit_timer               ; start the flash timer
-        lda #$09                    ; decay 9: the long rumble (the dodge blip uses a shorter one)
-        sta SID_AD3                 ; voice 3 envelope
-        lda #$00                    ; sustain 0 , release 0
-        sta SID_SR3                 ; voice 3 envelope part 2
-        lda #$00                    ; a drum may have left a low byte behind
-        sta SID_FREQ3L              ; voice 3 frequency, low byte
-        lda #$08                    ; low pitch for a crunchy noise
-        sta SID_FREQ3H              ; voice 3 frequency
-        lda #%10000000              ; noise waveform, gate off (this resets the envelope)
-        sta SID_CTRL3               ; voice 3 stops
-        lda #%10000001              ; noise waveform, gate on
-        sta SID_CTRL3               ; gate 0 to 1 starts the explosion sound
-        lda #0
-        sta drum_idx                ; the drum that was playing stops
-        lda #SFX_FRAMES             ; the drums keep quiet for a moment
-        sta sfx_timer
-        jsr start_explosion         ; a burst of sprites from the enemy, shake and fire bars
+        jsr sfx_explosion           ; the long noise rumble on voice 3
+        jsr start_explosion         ; a burst of sprites from the ship, shake and fire bars
         dec lives                   ; a hit costs a life (the score and the speed stay)
         jsr draw_lives              ; show it
         lda lives                   ; any left?
