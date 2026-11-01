@@ -76,6 +76,8 @@ CHAP_TEXT_POS = SCREEN + 12 * 40 + 4   ; screen address of the sentence, row 12,
 CHAPTER_LEN   = 32                  ; letters reserved for every sentence (the macro in data.asm pads shorter ones with spaces).
                                     ; Keep it 32: chapter.asm finds a sentence with 5 shifts left (chapter * 32)
 CHAP_FRAMES   = 150                 ; how long the chapter screen shows: 3 seconds
+CHAP_TING_GAP = 10                  ; frames between the two 'ting' notes when the chapter screen opens (0.2 s)
+CHAP_TING_SFX = 22                  ; the drums stay silent this long after a ting, so they do not cut it short
 ; Waiting times
 KEY_FRAMES = 1                      ; frames a key must be down to start the game: a quick tap in the browser emulator lasts only one frame
 RELEASE_FRAMES = 250                ; the title ignores all keys for this many frames (5 seconds) after loading: emulators type their own RUN keys then
