@@ -282,6 +282,10 @@ frame                               ; the game loop, runs once per screen refres
         bcs same_chapter            ; yes: the ending is not built yet, so the game just carries on
         inc chapter                 ; the next chapter (23:00 becomes 01:00)
         jsr chapter_screen          ; show its time and sentence, then back to the game
+        lda chapter                 ; chapter_screen switched the sprites back to ship + enemy only, so ...
+        cmp #1                      ; ... in chapter 1 (01:00) the Glitch joins now, after that screen
+        bne same_chapter            ; (later chapters keep the Glitch that is already falling)
+        jsr start_glitch
 same_chapter
         jsr spawn_enemy             ; respawn it at the top
 +

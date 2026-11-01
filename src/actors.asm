@@ -90,6 +90,16 @@ move_glitch                         ; subroutine: let the Glitch fall: slow for 
 .done
         rts                         ; return to the caller
 
+!zone start_glitch
+start_glitch                        ; subroutine: the Glitch enters the game (called once, when chapter 1 begins)
+        lda #1
+        sta glitch_active           ; move_glitch starts working
+        jsr spawn_glitch            ; it starts at the top, at a random X
+        lda SPR_ENABLE              ; switch sprite 7 on, and leave the other bits alone
+        ora #%10000000              ; bit 7 = the Glitch
+        sta SPR_ENABLE
+        rts                         ; return to the caller
+
 !zone ship_left
 ship_left                           ; subroutine: ship X - 1 as a 9-bit number, stops at MIN_X
         lda SPR_XHI                 ; bit 0 = bit 8 of the ship X
@@ -188,6 +198,8 @@ reset_difficulty                    ; subroutine: back to the slow start speed
         sta dodge_count             ; no dodges counted yet
         sta chapter                 ; back to the first chapter (23:00), A is still 0
         sta chapter_dodges          ; no dodges counted in this chapter yet
+        sta glitch_active           ; no Glitch until chapter 1 (move_glitch does nothing while this is 0)
+        sta glitch_timer            ; and its timer holds garbage at boot, so clear it too
         rts                        ; return to the caller
 
 reset_ship                          ; subroutine: ship back to the start position
