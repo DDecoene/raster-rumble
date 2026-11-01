@@ -4,6 +4,8 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 **Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far, and the third (The Border) is under construction.
 
+**[▶ Play it now in your browser](https://vc64web.github.io/#openROMS=true#port2=true#https://raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg)** (nothing to install: arrow keys steer, Space is fire, any key starts. The first start takes a few seconds)
+
 ![Gameplay: the Glitch and enemies that drift sideways](docs/screenshots/gameplay.gif)
 
 | Title | Chapter screen |
@@ -73,10 +75,11 @@ The latest build is always on the [Releases page](https://github.com/DDecoene/ra
 
 How it works:
 
-- The version lives in `src/version.asm` (`!scr "v0.0.3"`) and is shown on the title screen. `make version` prints it.
+- The version lives in `src/version.asm` (`!scr "v0.0.4"`) and is shown on the title screen. `make version` prints it.
 - `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or that does not build.
 - When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
 - So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
+- The same workflow puts the newest `.prg` on the `play` branch (one commit, replaced on every release). That is what the "Play it now" button loads: GitHub does not let other websites read release files (no CORS), but it does for `raw.githubusercontent.com`. The button opens the public emulator [vc64web](https://vc64web.github.io) with `#openROMS=true` (it installs the free open ROMs by itself), `#port2=true` (the keyboard is the joystick in port 2) and the address of the game. The emulator is vc64web (open source, based on VirtualC64); we only link to it. Until the first release made after this was added, the button has nothing to load.
 - `make d64` and `make dist` (the release files in `build/dist`) do the same locally. They need `c1541`: `brew install vice`.
 
 One-time GitHub setup (Settings, Branches, rule for `main`): require a pull request before merging, require the status check `check` (the job of `pr-check.yml`), and include administrators, so nobody can push to `main` directly.
