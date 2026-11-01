@@ -290,11 +290,17 @@ same_chapter
         jsr spawn_enemy             ; respawn it at the top
 +
         jsr move_glitch             ; the Glitch falls too (does nothing until chapter 1)
-        lda SPR_COLL               ; which sprites touched? (reading also clears the register)
-        and #%00000011              ; keep only the bits of the ship and the enemy
+        lda SPR_COLL               ; which sprites touched? (reading also clears the register, so read it once)
+        sta fx_tmp                  ; keep a copy: we test it twice
+        and #%00000011              ; the bits of the ship and the enemy
         cmp #%00000011              ; are both set, so do they overlap?
+        beq ship_hit                ; yes, a hit
+        lda fx_tmp                  ; no: what about the ship and the Glitch?
+        and #%10000001              ; bit 7 = Glitch, bit 0 = ship
+        cmp #%10000001              ; both set?
         bne +                       ; no, no hit
-        lda exp_timer               ; the burst sprites touch the ship too: while an explosion runs no new hit counts
+ship_hit
+        lda exp_timer              ; the burst sprites touch the ship too: while an explosion runs no new hit counts
         bne +
         lda #COLOR_RED              ; hit! red
         sta VIC_BORDER              ; flash the border
@@ -333,7 +339,11 @@ same_chapter
         jsr reset_ship              ; ... and the ship in its start position
 life_left
         jsr spawn_enemy             ; send the enemy back to the top
-        lda SPR_COLL                ; clear the collision register
+        lda glitch_active           ; is there a Glitch?
+        beq no_glitch               ; no (chapter 0, or game over just reset it)
+        jsr spawn_glitch            ; yes: it goes back to the top too, and slow again
+no_glitch
+        lda SPR_COLL               ; clear the collision register
 +
         lda hit_timer               ; is the border flashing?
         beq +                       ; no, nothing to do
