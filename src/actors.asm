@@ -50,6 +50,46 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         sta SPR_XHI                 ; write it back
         rts                         ; return to the caller
 
+!zone spawn_glitch
+spawn_glitch                        ; subroutine: Glitch to the top, random X anywhere in the visible range
+        lda #MIN_Y - 10             ; just above the visible area, so it slides in
+        sta SPR7_Y                  ; set glitch Y
+        jsr pick_x                  ; xhi:xlo = random X
+        lda xlo                     ; low 8 bits of the glitch X
+        sta SPR7_X                  ; set glitch X
+        lda SPR_XHI                 ; bit 8 of all sprites
+        and #%01111111              ; clear the Glitch's bit (bit 7)
+        ldx xhi                     ; is X 256 or more?
+        beq .store                  ; no, bit stays clear
+        ora #%10000000              ; yes, set the Glitch's bit 8
+.store
+        sta SPR_XHI                 ; write it back
+        lda #0                      ; a new Glitch starts with the slow fall again
+        sta glitch_timer            ; so reset the frame counter
+        rts                         ; return to the caller
+
+!zone move_glitch
+move_glitch                         ; subroutine: let the Glitch fall: slow for GLITCH_WAIT frames, then fast
+        lda glitch_active           ; is there a Glitch at all (chapter 1 or later)?
+        beq .done                   ; no, nothing to do
+        lda #GLITCH_FAST            ; assume the fast fall ...
+        ldx glitch_timer            ; ... unless it has not fallen slowly long enough yet
+        cpx #GLITCH_WAIT            ; timer compared to the wait time
+        bcs .fall                   ; timer >= wait: stay with the fast speed
+        inc glitch_timer            ; one more slow frame (it stops counting at GLITCH_WAIT: a byte would wrap at 256)
+        lda #GLITCH_SLOW            ; the slow speed instead
+.fall
+        clc                         ; clear carry before adding
+        adc SPR7_Y                  ; Y + speed
+        sta SPR7_Y                  ; store the new Glitch Y
+        cmp #MAX_Y                  ; has it reached the bottom?
+        bcc .done                   ; no (A < MAX_Y), carry on next frame
+        jsr add_score               ; the Glitch got past us: +1 point
+        jsr update_hiscore          ; if that beat the high score, it becomes the new one
+        jsr spawn_glitch            ; back to the top, and slow again
+.done
+        rts                         ; return to the caller
+
 !zone ship_left
 ship_left                           ; subroutine: ship X - 1 as a 9-bit number, stops at MIN_X
         lda SPR_XHI                 ; bit 0 = bit 8 of the ship X

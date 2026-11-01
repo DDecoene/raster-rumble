@@ -285,7 +285,8 @@ frame                               ; the game loop, runs once per screen refres
 same_chapter
         jsr spawn_enemy             ; respawn it at the top
 +
-        lda SPR_COLL                ; which sprites touched? (reading also clears the register)
+        jsr move_glitch             ; the Glitch falls too (does nothing until chapter 1)
+        lda SPR_COLL               ; which sprites touched? (reading also clears the register)
         and #%00000011              ; keep only the bits of the ship and the enemy
         cmp #%00000011              ; are both set, so do they overlap?
         bne +                       ; no, no hit
