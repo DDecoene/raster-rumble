@@ -73,11 +73,11 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
 
 ## Contributing and license
 
-Contributions are welcome, see `CONTRIBUTING.md` (pull requests go to `dev`, and a contribution becomes the property of the author of the game).
+Contributions are welcome, see `CONTRIBUTING.md` (pull requests go to `dev`).
 
-The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license. Selling the game or anything derived from it is reserved to the author, Dennis Decoene.
+The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license.
 
-Why: I have no intention of selling this game, but I do not want anyone else to sell it either. That is why the license is non-commercial, and why a contribution is handed over to me: so the whole project stays under one owner who keeps it free to play and can still say no to commercial use.
+I have no intention of selling this game, but I do not want anyone else to sell it either. That is why the license is non-commercial, and why contributions are handed over to me: it keeps the whole project under one owner, free to play for everyone and protected from commercial use.
 
 ## Project layout
 

@@ -19,8 +19,7 @@ so small, clear pull requests are the easiest to review.
 
 ## License and ownership of your contribution
 
-The project is licensed under CC BY-NC-SA 4.0 (see `LICENSE`). Only the copyright holder, Dennis Decoene, may sell the game
-or a version of it.
+The project is licensed under CC BY-NC-SA 4.0 (see `LICENSE`), so it is free to play, share and adapt, but not to sell.
 
 By opening a pull request you agree that:
 
@@ -29,8 +28,7 @@ By opening a pull request you agree that:
    him an exclusive, worldwide, perpetual, irrevocable and sublicensable license to use it in any way, including commercially.
 3. Your contribution is also available to everyone else under CC BY-NC-SA 4.0, like the rest of the project.
 
-Why the handover: the author has no intention of selling the game, but does not want anyone else to sell it either. With
-every contribution owned by one person, the project stays free to play and adapt, and commercial use stays off the table
-unless the author decides otherwise.
+The author has no intention of selling the game, but does not want anyone else to sell it either. With every contribution
+under one owner, the project stays free to play and adapt, and protected from commercial use.
 
 If you do not agree, please do not open a pull request. You are still free to fork the project and adapt it under the license.
