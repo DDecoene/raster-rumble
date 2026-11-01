@@ -157,8 +157,8 @@ plasma_init                         ; subroutine: colour all 24 rows of the play
         rts                         ; return to the caller
 
 !zone start_explosion
-start_explosion                     ; subroutine: a hit! six sprites (2 to 7) fly out from where the enemy is, the screen shakes
-        ldx #5                      ; particle number, counting down
+start_explosion                     ; subroutine: a hit! five sprites (2 to 6) fly out from where the enemy is, the screen shakes
+        ldx #4                     ; particle number, counting down
 .p
         lda SPR1_X                  ; start at the enemy: X low byte ...
         sta PART_LO,x
@@ -198,7 +198,7 @@ update_particles                    ; subroutine: once per frame: move the burst
         lda frame_count             ; the colour cycle: changes every 2 frames
         lsr
         sta fx_tmp
-        ldx #5                      ; particle number, counting down
+        ldx #4                      ; particle number, counting down
 .next
         lda SPR_ENABLE              ; has this particle gone off the screen already?
         and bit_tab,x

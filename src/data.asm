@@ -117,16 +117,16 @@ over_scroll
         !byte $ff                   ; end marker
 
 ; Game effects tables
-burst_dx                            ; the 6 burst particles fly out in a star: sideways speed (signed) ...
-        !byte 4, 2, -2, -4, -2, 2
+burst_dx                            ; the 5 burst particles fly out in a star: sideways speed (signed) ...
+        !byte 0, 4, 2, -2, -4
 burst_dy                            ; ... and vertical speed
-        !byte 0, 3, 3, 0, -3, -3
+        !byte -4, -1, 3, 3, -1
 part_cols                           ; the colours the particles cycle through: white yellow orange red
         !byte 1, 7, 8, 2
-bit_tab                             ; the bit of sprite 2 to 7 in $d015 and $d010
-        !byte %00000100, %00001000, %00010000, %00100000, %01000000, %10000000
+bit_tab                             ; the bit of sprite 2 to 6 in $d015 and $d010
+        !byte %00000100, %00001000, %00010000, %00100000, %01000000
 nbit_tab                            ; the same, inverted
-        !byte %11111011, %11110111, %11101111, %11011111, %10111111, %01111111
+        !byte %11111011, %11110111, %11101111, %11011111, %10111111
 shake_mask                          ; shake size by explosion age (exp_timer / 4): none at the end, wild at the start
         !byte 0, 1, 1, 3, 3, 3, 7, 7
 ; Parallax: how far each band shifts for a ship X / 8 of 0 to 40 (far stars little, near stars a lot, all opposite to the ship)

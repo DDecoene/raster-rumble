@@ -18,7 +18,7 @@ Notes from the brainstorm. Goal: you write the code, Claude explains and reviews
 | Dodge sound (SID voice 3) | `main.asm`, in the block that runs when the enemy reaches the bottom |
 | Spawning with 9-bit X | `spawn_enemy` in `src/actors.asm` |
 | Collision | `SPR_COLL` ($d01e), only bits 0 and 1 are tested |
-| Explosion particles | `src/effects.asm`, they use sprites 2 to 7 |
+| Explosion particles | `src/effects.asm`, they use sprites 2 to 6 |
 | Settings | `src/config.asm` (`DODGES_PER_LEVEL`, `ENEMY_SPEED`, `MAX_SPEED`) |
 
 Note: the enemy already gets faster every 10 dodges. Decide whether the new enemy appears **once** (at the first ten, recommended) or at **every ten**.
