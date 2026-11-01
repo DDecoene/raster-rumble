@@ -73,7 +73,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
 
 ## Contributing and license
 
-Contributions are welcome, see `CONTRIBUTING.md` (pull requests go to `dev`).
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md) (pull requests go to `dev`).
 
 The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license.
 
