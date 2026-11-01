@@ -162,8 +162,21 @@ update_stars                        ; subroutine: put back what was under every 
         sta star_ucode,x
         and #%11000000              ; ... and the star gets the same background colour (bits 6 and 7 of the code, extended colour mode)
         sta star_bg
+        lda star_ucode,x            ; but is that really the background, or the shape of another star that sits in this cell too?
+        and #%00111111              ; the screen code without the background bits
+        sec
+        sbc #STAR_CHAR              ; 0 to 7 = one of the 8 star shapes
+        cmp #8
+        bcs .real                   ; no: it is the real background
+        lda star_bg                 ; another star is here. Its shape must never come back as "background": when the stars leave
+        ora #$20                    ; in the wrong order that shape stays on the screen for good (on the title and game over screens
+        sta star_ucode,x            ; the plasma is not there to clean it up). So remember a space with the same background
+        lda #0                      ; and black
+        beq .savecol                ; (always taken)
+.real
         lda (star_cptr),y
         and #$0f
+.savecol
         sta star_ucol,x
         lda star_sub,x              ; the pixel row decides which of the 8 shapes to use
         clc
