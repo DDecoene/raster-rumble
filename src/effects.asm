@@ -157,16 +157,15 @@ plasma_init                         ; subroutine: colour all 24 rows of the play
         rts                         ; return to the caller
 
 !zone start_explosion
-start_explosion                     ; subroutine: a hit! five sprites (2 to 6) fly out from where the enemy is, the screen shakes
+start_explosion                     ; subroutine: a hit! five sprites (2 to 6) fly out from where the ship is, the screen shakes
         ldx #4                     ; particle number, counting down
 .p
-        lda SPR1_X                  ; start at the enemy: X low byte ...
+        lda SPR0_X                  ; start at the ship (the enemy or the Glitch that hit it is on top of it): X low byte ...
         sta PART_LO,x
-        lda SPR_XHI                 ; ... and bit 8 (the enemy's bit is bit 1: shift it down to bit 0)
-        lsr
+        lda SPR_XHI                 ; ... and bit 8 (the ship's bit is bit 0)
         and #%00000001
         sta PART_HI,x
-        lda SPR1_Y                  ; ... Y
+        lda SPR0_Y                  ; ... Y
         sta PART_Y,x
         lda burst_dx,x              ; each particle has its own direction
         sta PART_DX,x
