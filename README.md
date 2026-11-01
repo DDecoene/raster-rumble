@@ -77,6 +77,8 @@ Contributions are welcome, see `CONTRIBUTING.md` (pull requests go to `dev`, and
 
 The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license. Selling the game or anything derived from it is reserved to the author, Dennis Decoene.
 
+Why: I have no intention of selling this game, but I do not want anyone else to sell it either. That is why the license is non-commercial, and why a contribution is handed over to me: so the whole project stays under one owner who keeps it free to play and can still say no to commercial use.
+
 ## Project layout
 
     LICENSE               CC BY-NC-SA 4.0

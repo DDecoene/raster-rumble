@@ -29,4 +29,8 @@ By opening a pull request you agree that:
    him an exclusive, worldwide, perpetual, irrevocable and sublicensable license to use it in any way, including commercially.
 3. Your contribution is also available to everyone else under CC BY-NC-SA 4.0, like the rest of the project.
 
+Why the handover: the author has no intention of selling the game, but does not want anyone else to sell it either. With
+every contribution owned by one person, the project stays free to play and adapt, and commercial use stays off the table
+unless the author decides otherwise.
+
 If you do not agree, please do not open a pull request. You are still free to fork the project and adapt it under the license.
