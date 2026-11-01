@@ -30,6 +30,10 @@ HIT_FRAMES  = 10                    ; how many frames the border stays red after
 ; The story: the night is split into chapters (see docs/story.md)
 CHAPTER_DODGES = 25                 ; dodges needed to finish a chapter (use 2 while testing, 25 takes minutes)
 CHAPTERS       = 6                  ; number of chapters in the story
+; The Glitch (chapter 2, the second enemy): it falls slowly, then suddenly fast, with no warning
+GLITCH_WAIT = 60                    ; frames the Glitch falls slowly (1.2 seconds), then it speeds up
+GLITCH_SLOW = 1                     ; pixels per frame while it falls slowly
+GLITCH_FAST = 5                     ; pixels per frame after the wait (the same as MAX_SPEED of the first enemy)
 
 ; ============================================================================================================
 ; [3] PLAYFIELD: limits so the sprite stays in the visible part of the screen
@@ -165,6 +169,9 @@ star_bg     = $30                   ; scratch: the background bits (6 and 7) of 
 ; The story
 chapter        = $31                ; which chapter we are in: 0 = 23:00 up to 5 = 07:00. Set to 0 in reset_difficulty
 chapter_dodges = $32                ; dodged enemies in this chapter so far. Back to 0 when a new chapter starts
+; The Glitch
+glitch_active = $33                 ; 0 = no Glitch yet (chapter 0), 1 = it is falling. Set to 0 in reset_difficulty
+glitch_timer  = $34                 ; frames the current Glitch has been falling (counts up, back to 0 when it respawns)
 ; Scratch bytes shared by several routines (they must not be needed at the same time)
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
 xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr
