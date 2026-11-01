@@ -4,6 +4,14 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 **Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far.
 
+![The Glitch in action](docs/screenshots/glitch.gif)
+
+| Title | The Glitch (the green chip) |
+|---|---|
+| ![Title screen](docs/screenshots/title.png) | ![Gameplay with the Glitch](docs/screenshots/glitch.png) |
+| **Chapter screen** | **Game over** |
+| ![Chapter screen](docs/screenshots/chapter.png) | ![Game over screen](docs/screenshots/gameover.png) |
+
 A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge. After ten dodges a chapter screen opens and the Glitch, a second falling enemy that suddenly speeds up, joins in.
 
 ## Tools
@@ -75,6 +83,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
 
     LICENSE               CC BY-NC-SA 4.0
     CONTRIBUTING.md       how to contribute, and who owns a contribution
+    docs/screenshots/     the pictures in this README, and social-preview.png for the GitHub social preview
     src/main.asm          startup code and the main loop, includes everything else
     src/hardware.asm      names for the VIC, SID and CIA registers, colours, fixed memory areas
     src/config.asm        difficulty settings, screen layout, zero page and RAM variable addresses
