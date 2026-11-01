@@ -23,7 +23,8 @@
     const SPRITE = { ship: 0, enemy: 1, glitch: 7 };
     const ZP = { score: 0x04, enemySpeed: 0x07, lives: 0x0e, chapter: 0x31, glitchActive: 0x33, enemyDx: 0x35 };
     const VIC = { x: 0xd000, xhi: 0xd010, enable: 0xd015 };
-    const SIZE = 24;                         // sprite width and height in pixels
+    const ENEMY_DRIFT = 2;                   // pixels per frame a drifting enemy moves sideways
+    const SIZE = 24;                        // sprite width and height in pixels
 
     const peek = (a) => Module._wasm_peek(a);
     const sprX = (n) => peek(VIC.x + 2 * n) + ((peek(VIC.xhi) >> n) & 1) * 256;
@@ -58,7 +59,7 @@
     const playing = () => (peek(VIC.enable) & 3) === 3 && peek(ZP.lives) > 0;
 
     function enemyLandingX() {               // where a drifting enemy will be when it reaches the height of the ship
-        const dx = (peek(ZP.enemyDx) << 24) >> 24;                  // 0, 1 or $ff: a signed byte
+        const dx = ((peek(ZP.enemyDx) << 24) >> 24) * ENEMY_DRIFT;  // 0, 1 or $ff (a signed byte) times the pixels per frame
         const speed = Math.max(1, peek(ZP.enemySpeed));
         const frames = Math.max(0, Math.floor((sprY(SPRITE.ship) - sprY(SPRITE.enemy)) / speed));
         const span = MAX_X - MIN_X;                                 // it bounces between the edges, like a ball

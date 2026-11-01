@@ -30,6 +30,8 @@ HIT_FRAMES  = 10                    ; how many frames the border stays red after
 ; The story: the night is split into chapters (see docs/story.md)
 CHAPTER_DODGES = 25                 ; dodges needed to finish a chapter (use 2 while testing, 25 takes minutes)
 CHAPTERS       = 6                  ; number of chapters in the story
+; The Border (chapter 2): some enemies drift sideways and bounce off the left and right edges
+ENEMY_DRIFT = 2                     ; pixels per frame a drifting enemy moves sideways (half the screen while it falls)
 ; The Glitch (chapter 2, the second enemy): it falls slowly, then suddenly fast, with no warning
 GLITCH_WAIT = 60                    ; frames the Glitch falls slowly (1.2 seconds), then it speeds up
 GLITCH_SLOW = 1                     ; pixels per frame while it falls slowly
