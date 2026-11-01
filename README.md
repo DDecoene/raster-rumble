@@ -40,6 +40,20 @@ To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: t
 
 To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu Flash, Ultimate 64 or similar.
 
+## Releases
+
+The latest build is always on the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): `raster-rumble-vX.Y.Z.prg` (emulators, Kung Fu Flash, Ultimate) and `raster-rumble-vX.Y.Z.d64` (disk image). We are in alpha, so versions are `0.0.x`.
+
+How it works:
+
+- The version lives in `src/version.asm` (`!scr "v0.0.1"`) and is shown on the title screen. `make version` prints it.
+- `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or that does not build.
+- When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
+- So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
+- `make d64` and `make dist` (the release files in `build/dist`) do the same locally. They need `c1541`: `brew install vice`.
+
+One-time GitHub setup (Settings, Branches, rule for `main`): require a pull request before merging, require the status check `check` (the job of `pr-check.yml`), and include administrators, so nobody can push to `main` directly.
+
 ## Project layout
 
     src/main.asm          startup code and the main loop, includes everything else
@@ -53,9 +67,12 @@ To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu
     src/demo.asm          their demo effects: raster bars, bouncing letters, scroller
     src/chapter.asm       the screen between two chapters of the story (see docs/story.md)
     src/data.asm          tables and text (star data, note tables, labels)
+    src/version.asm       the version number (the one place it lives), shown on the title screen
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
     tools/bot.js          dodging bot for test runs in the browser emulator
+    tools/version.sh      prints the version from src/version.asm (Makefile and workflows use it)
+    .github/workflows/    pr-check.yml checks pull requests to main, release.yml builds and publishes a release
     project-config.json   VS64 project settings (toolkit: acme)
     .vscode/              build task, test task, launch config
     Makefile              command-line build
