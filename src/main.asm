@@ -61,6 +61,8 @@ start
         sta SPRITE_PTR              ; tell the VIC sprite 0 uses that shape
         lda #enemy_data / 64        ; enemy shape address divided by 64 = pointer value (129)
         sta SPRITE1_PTR             ; tell the VIC sprite 1 uses that shape
+        lda #glitch_data / 64       ; the Glitch shape address divided by 64 = pointer value (133)
+        sta SPRITE7_PTR             ; tell the VIC sprite 7 uses that shape
         lda #%00000011              ; bits 0 and 1 set = sprites 0 and 1 are multicolor
         sta SPR_MULTI               ; 12 fat pixels per row, 4 colours (including transparent) per sprite
         lda #COLOR_ORANGE           ; multicolor 0 is shared by all sprites
@@ -71,6 +73,8 @@ start
         sta SPR0_COLOR              ; sprite 0 (ship) hull is white
         lda #COLOR_RED              ; colour 2 = red
         sta SPR1_COLOR              ; sprite 1 (enemy) is red
+        lda #COLOR_GREEN            ; colour 5 = green
+        sta SPR7_COLOR              ; sprite 7 (the Glitch) is green
         lda #160                    ; start X: roughly the middle
         sta SPR0_X                  ; set ship X
         lda #$00                    ; bit 8 of every sprite X = 0
@@ -187,11 +191,16 @@ frame                               ; the game loop, runs once per screen refres
         lsr                         ; ... ends up in bit 0
         lsr                         ; (lsr alone on A shifts the accumulator)
         and #%00000001              ; 0 = frame A, 1 = frame B
+        tax                         ; keep the 0 or 1 safe in X, A is overwritten below
         asl                         ; times 2, because frame B shapes sit 2 blocks further on
         ora #sprite_data / 64       ; 128 for frame A, 130 for frame B: the ship pointer
         sta SPRITE_PTR              ; ship shape for this frame
         ora #1                      ; +1 gives 129 or 131: the enemy pointer
         sta SPRITE1_PTR             ; enemy shape for this frame
+        txa                         ; get the frame back into A
+        clc                         ; clear carry before adding
+        adc #glitch_data / 64       ; 133 for frame A, 134 for frame B: the Glitch pointer
+        sta SPRITE7_PTR             ; the Glitch shape for this frame
 
         jsr update_stars            ; scroll the starfield down
         jsr update_music            ; the synth sweeps (once per frame; the tune itself ticks inside game_bars, twice a frame)
