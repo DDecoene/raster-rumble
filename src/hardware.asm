@@ -24,7 +24,8 @@ CPU_PORT   = $01                    ; processor port: bit 2 = 0 shows the charac
 ; Shape pointers (at the end of screen memory): the value * 64 = the address of the shape
 SPRITE_PTR = $07f8                  ; sprite 0 data pointer, value * 64 = address of its shape
 SPRITE1_PTR = $07f9                 ; sprite 1 data pointer
-SPRITE2_PTR = $07fa                 ; sprite 2 data pointer, sprites 3 to 7 follow
+SPRITE2_PTR = $07fa                 ; sprite 2 data pointer, sprites 3 to 6 follow
+SPRITE7_PTR = $07ff                 ; sprite 7 data pointer
 ; Positions
 SPR0_X     = $d000                  ; sprite 0 X position (low 8 bits)
 SPR0_Y     = $d001                  ; sprite 0 Y position
@@ -32,6 +33,8 @@ SPR1_X     = $d002                  ; sprite 1 (the enemy) X position
 SPR1_Y     = $d003                  ; sprite 1 Y position
 SPR2_X     = $d004                  ; sprite 2 X (low 8 bits); sprite n is at $d000 + 2 * n, its Y is the next register
 SPR2_Y     = $d005                  ; sprite 2 Y
+SPR7_X     = $d00e                  ; sprite 7 X position
+SPR7_Y     = $d00f                  ; sprite 7 Y position
 SPR_XHI    = $d010                  ; bit 8 of every sprite's X: bit 0 = ship, bit 1 = enemy (X can reach 343, one byte only 255)
 ; Switches and status
 SPR_ENABLE = $d015                  ; one bit per sprite: 1 = visible
@@ -42,7 +45,8 @@ SPR_MC0    = $d025                  ; multicolor 0, shared by all sprites (bit p
 SPR_MC1    = $d026                  ; multicolor 1, shared by all sprites (bit pair 11)
 SPR0_COLOR = $d027                  ; sprite 0 colour (0-15)
 SPR1_COLOR = $d028                  ; sprite 1 colour (0-15)
-SPR2_COLOR = $d029                  ; sprite 2 colour, sprites 3 to 7 follow
+SPR2_COLOR = $d029                  ; sprite 2 colour, sprites 3 to 6 follow
+SPR7_COLOR = $d02e                  ; sprite 7 colour (0-15)
 
 ; ============================================================================================================
 ; [3] SCREEN (VIC-II video chip)
