@@ -48,6 +48,8 @@ spawn_enemy                         ; subroutine: enemy to the top, random X any
         ora #%00000010              ; yes, set the enemy's bit 8
 .store
         sta SPR_XHI                 ; write it back
+        lda #0                      ; for now every enemy falls straight down (chapter 2 will pick a direction here)
+        sta enemy_dx
         rts                         ; return to the caller
 
 !zone spawn_glitch
@@ -199,6 +201,7 @@ reset_difficulty                    ; subroutine: back to the slow start speed
         sta chapter_dodges          ; no dodges counted in this chapter yet
         sta glitch_active           ; no Glitch until chapter 1 (move_glitch does nothing while this is 0)
         sta glitch_timer            ; and its timer holds garbage at boot, so clear it too
+        sta enemy_dx                ; no sideways drift until chapter 2
         rts                        ; return to the caller
 
 reset_ship                          ; subroutine: ship back to the start position

@@ -245,6 +245,14 @@ frame                               ; the game loop, runs once per screen refres
         beq +                       ; 0 = skip homing this frame
         jsr home_enemy              ; one pixel towards the ship
 +
+        lda enemy_dx                ; the sideways drift of the enemy
+        beq no_drift                ; 0: straight down, nothing to do
+        bmi drift_left              ; bit 7 set = negative = left
+        jsr enemy_right             ; 1: one pixel right
+        jmp no_drift
+drift_left
+        jsr enemy_left              ; $ff: one pixel left
+no_drift
         lda SPR1_Y                  ; current enemy Y
         clc                         ; clear carry before adding
         adc enemy_speed             ; fall as fast as the current level allows

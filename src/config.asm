@@ -176,6 +176,8 @@ chapter_dodges = $32                ; dodged enemies in this chapter so far. Bac
 ; The Glitch
 glitch_active = $33                 ; 0 = no Glitch yet (chapter 0), 1 = it is falling. Set to 0 in reset_difficulty
 glitch_timer  = $34                 ; frames the current Glitch has been falling (counts up, back to 0 when it respawns)
+; The Border
+enemy_dx      = $35                 ; sideways direction of the enemy: 0 = straight down, 1 = right, $ff (-1) = left
 ; Scratch bytes shared by several routines (they must not be needed at the same time)
 star_ptr    = $fb                   ; $fb $fc: screen address of the star being updated (zero page pointer)
 xlo         = $fd                   ; scratch: 9-bit X being built for the enemy (low byte), shares $fd/$fe with star_cptr
