@@ -2,7 +2,9 @@
 
 A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one day, real hardware.
 
-A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge.
+**Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far.
+
+A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge. After ten dodges a chapter screen opens and the Glitch, a second falling enemy that suddenly speeds up, joins in.
 
 ## Tools
 
@@ -40,6 +42,21 @@ To see what the C64 actually receives, set `SHOW_JOY = 1` in `src/config.asm`: t
 
 To run on a real C64, copy `build/raster-rumble.prg` to an SD card for a Kung Fu Flash, Ultimate 64 or similar.
 
+## The story
+
+The game tells *The Night of the Raster Beam*. It is 1986 and a kid forgot to switch off the Commodore 64. Inside lives Pixel, a small ship. The Raster Beam that draws the screen has started to stutter, and at 07:00 someone will pull the plug. Pixel has until morning to write its name to the floppy disk, the only place that survives the power cut. Every hour of the night is a chapter, and a chapter screen with the time and one sentence shows between them.
+
+| Time | Chapter | Playable |
+|---|---|---|
+| 23:00 | Boot | yes |
+| 01:00 | The Glitch | yes |
+| 03:00 | The Border | not yet |
+| 04:30 | The Memory | not yet |
+| 06:00 | The Raster Beam | not yet |
+| 07:00 | The Disk | not yet |
+
+The full story and the plans per chapter are in `docs/story.md`.
+
 ## Releases
 
 The latest build is always on the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): `raster-rumble-vX.Y.Z.prg` (emulators, Kung Fu Flash, Ultimate) and `raster-rumble-vX.Y.Z.d64` (disk image). We are in alpha, so versions are `0.0.x`.
@@ -54,8 +71,16 @@ How it works:
 
 One-time GitHub setup (Settings, Branches, rule for `main`): require a pull request before merging, require the status check `check` (the job of `pr-check.yml`), and include administrators, so nobody can push to `main` directly.
 
+## Contributing and license
+
+Contributions are welcome, see `CONTRIBUTING.md` (pull requests go to `dev`, and a contribution becomes the property of the author of the game).
+
+The game, its code, story and assets are licensed under [CC BY-NC-SA 4.0](LICENSE): you may play, share and adapt them with credit, for non-commercial use, and what you make from them must use the same license. Selling the game or anything derived from it is reserved to the author, Dennis Decoene.
+
 ## Project layout
 
+    LICENSE               CC BY-NC-SA 4.0
+    CONTRIBUTING.md       how to contribute, and who owns a contribution
     src/main.asm          startup code and the main loop, includes everything else
     src/hardware.asm      names for the VIC, SID and CIA registers, colours, fixed memory areas
     src/config.asm        difficulty settings, screen layout, zero page and RAM variable addresses
