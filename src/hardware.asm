@@ -9,6 +9,7 @@
 ;   [4] Colours             the 16 colour numbers we use
 ;   [5] Sound (SID)         voice 1, 2 and 3, filter and volume
 ;   [6] Keyboard and joystick (CIA 1)
+;   [7] Timers (CIA 2)
 
 ; ============================================================================================================
 ; [1] MEMORY AREAS
@@ -62,6 +63,7 @@ VIC_BG1    = $d022                  ; extended colour mode: background colour 1 
 ; ============================================================================================================
 ; [4] COLOURS: the C64 colour numbers we use
 ; ============================================================================================================
+COLOR_BLACK = 0                     ; C64 colour number for black
 COLOR_WHITE = 1                     ; C64 colour number for white
 COLOR_RED   = 2                     ; C64 colour number for red
 COLOR_GREEN = 5                     ; C64 colour number for green
@@ -107,3 +109,11 @@ CIA1_DDRA  = $dc02                  ; data direction of port A: 1 = output, 0 = 
 CIA1_DDRB  = $dc03                  ; data direction of port B
 CIA1_CRA   = $dc0e                  ; CIA 1 timer A control (bit 1 = show the timer on port B pin 6)
 CIA1_CRB   = $dc0f                  ; CIA 1 timer B control (bit 1 = show the timer on port B pin 7)
+
+; ============================================================================================================
+; [7] TIMERS (CIA 2)
+; ============================================================================================================
+; Timer A counts down by one every CPU cycle while it runs, so it can measure how long a piece of code takes.
+CIA2_TA_LO = $dd04                  ; CIA 2 timer A, low byte (read: the counter, write: the start value)
+CIA2_TA_HI = $dd05                  ; CIA 2 timer A, high byte
+CIA2_CRA   = $dd0e                  ; CIA 2 timer A control (bit 0 = run, bit 4 = load the start value now)
