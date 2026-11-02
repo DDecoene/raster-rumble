@@ -16,6 +16,7 @@
 SCREEN     = $0400                  ; screen memory, 40x25 characters, one byte per character
 COLOR_RAM  = $d800                  ; colour memory, one byte per character, same layout as the screen
 CPU_PORT   = $01                    ; processor port: bit 2 = 0 shows the character ROM at $d000 instead of I/O
+CURSOR_OFF = $cc                  ; KERNAL flag: 0 = the cursor blinks, anything else = no cursor
 
 ; ============================================================================================================
 ; [2] SPRITES (VIC-II video chip)
@@ -62,6 +63,7 @@ VIC_BG1    = $d022                  ; extended colour mode: background colour 1 
 ; ============================================================================================================
 ; [4] COLOURS: the C64 colour numbers we use
 ; ============================================================================================================
+COLOR_BLACK = 0                     ; C64 colour number for black
 COLOR_WHITE = 1                     ; C64 colour number for white
 COLOR_RED   = 2                     ; C64 colour number for red
 COLOR_GREEN = 5                     ; C64 colour number for green
