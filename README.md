@@ -33,3 +33,7 @@ The next generation is computed bit-sliced: 8 cells per byte at once, with AND/O
 - `make` builds `build/sandbox.prg`, `make test` runs it in the browser emulator.
 
 Updating the online version: copy `build/sandbox.prg` to `life.prg` and commit it, then point the link above at that commit (`git log -1 --format=%h -- life.prg`). The link names a commit and not the branch on purpose: the browser emulator keeps every file it has loaded in its own cache forever, so a link to `sandbox/life.prg` keeps showing the first version you ever opened.
+
+## References
+
+- [6502 instruction set](https://www.masswerk.at/6502/6502_instruction_set.html) (mass:werk): the opcode matrix, flags and cycle counts per instruction and addressing mode, a primer on ADC/SBC, the undocumented opcodes and the 6510 pinout. Handy for counting cycles by hand.
