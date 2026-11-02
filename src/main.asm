@@ -7,9 +7,12 @@
 ;
 ; How a generation is stored and drawn is explained in life.asm.
 ;
-; MEASURED with CIA 2 timer A (see 'Cycle measurement' below), in cycles, a PAL frame has 19656:
-;       life_render     13125 cycles = 0.67 frame (12555 for the 6510 alone, the rest is the VIC-II
-;                       stealing the bus on badlines while it runs)
+; MEASURED with CIA 2 timer A (see 'Cycle measurement' below) in VICE x64sc, PAL. A frame has 19656 cycles.
+;       life_step       25854 cycles = 1.32 frames   (24768 for the 6510 alone, the same for every pattern:
+;                                                     the step has no branches that depend on the cells)
+;       life_render     13639 cycles = 0.69 frame    (12555 for the 6510 alone)
+; The difference is the VIC-II stealing the bus on badlines. Together about 2 frames per generation, so at
+; FRAMES_PER_GEN = 0 the world runs at about 25 generations per second.
 
 !source "src/hardware.asm"
 
@@ -113,6 +116,10 @@ main_loop
         beq restart                 ; space or fire: back to the start pattern
 
         +timer_start
+        jsr life_step               ; the next generation, CUR and NXT swap places
+        +timer_stop cycles_step
+
+        +timer_start
         jsr life_render
         +timer_stop cycles_render
 
@@ -159,6 +166,7 @@ wait_frame
 ; ============================================================================================================
 ; Measurements (16 bits, low byte first)
 ; ============================================================================================================
+cycles_step         !word 0         ; cycles of the last life_step
 cycles_render       !word 0         ; cycles of the last life_render
 timer_overhead_word !word 0         ; calibration result, only the low byte is used
 timer_overhead      !byte 0         ; cycles that a start + stop adds to every measurement
