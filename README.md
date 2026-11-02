@@ -4,7 +4,7 @@ My own C64 experiments in 6502 assembly. Branched from raster-rumble, stripped d
 
 ## Conway's Game of Life
 
-**[▶ Run it in your browser](https://vc64web.github.io/#openROMS=true#https://raw.githubusercontent.com/DDecoene/raster-rumble/sandbox/life.prg)** (nothing to install, the first start takes a few seconds)
+**[▶ Run it in your browser](https://vc64web.github.io/#openROMS=true#https://raw.githubusercontent.com/DDecoene/raster-rumble/ee0f13b/life.prg)** (nothing to install, the first start takes a few seconds)
 
 ![Game of Life on the C64: glider and blinker, R-pentomino, glider gun, random worlds](docs/life.gif)
 
@@ -30,4 +30,6 @@ The next generation is computed bit-sliced: 8 cells per byte at once, with AND/O
 - `src/main.asm`: the program: start, main loop, keys, status bar, timing
 - `src/life.asm`: the Game of Life itself: grid, patterns (add your own at the end), generation step, renderer
 - `src/hardware.asm`: names for the chip registers (include it with `!source "src/hardware.asm"` when you need it)
-- `make` builds `build/sandbox.prg`, `make test` runs it in the browser emulator. After a change, copy `build/sandbox.prg` to `life.prg` to update the online version.
+- `make` builds `build/sandbox.prg`, `make test` runs it in the browser emulator.
+
+Updating the online version: copy `build/sandbox.prg` to `life.prg` and commit it, then point the link above at that commit (`git log -1 --format=%h -- life.prg`). The link names a commit and not the branch on purpose: the browser emulator keeps every file it has loaded in its own cache forever, so a link to `sandbox/life.prg` keeps showing the first version you ever opened.
