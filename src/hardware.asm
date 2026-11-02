@@ -107,6 +107,7 @@ CIA1_PORTA = $dc00                  ; joystick port 2, bits are 0 when pressed: 
 CIA1_PORTB = $dc01                  ; keyboard rows / joystick port 1
 CIA1_DDRA  = $dc02                  ; data direction of port A: 1 = output, 0 = input (per pin)
 CIA1_DDRB  = $dc03                  ; data direction of port B
+CIA1_TA_LO = $dc04                  ; CIA 1 timer A, low byte (the KERNAL keeps it running: it times the interrupt)
 CIA1_CRA   = $dc0e                  ; CIA 1 timer A control (bit 1 = show the timer on port B pin 6)
 CIA1_CRB   = $dc0f                  ; CIA 1 timer B control (bit 1 = show the timer on port B pin 7)
 
