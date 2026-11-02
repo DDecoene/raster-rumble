@@ -9,6 +9,7 @@
 ;   [4] Colours             the 16 colour numbers we use
 ;   [5] Sound (SID)         voice 1, 2 and 3, filter and volume
 ;   [6] Keyboard and joystick (CIA 1)
+;   [7] Timers (CIA 2)
 
 ; ============================================================================================================
 ; [1] MEMORY AREAS
@@ -16,7 +17,6 @@
 SCREEN     = $0400                  ; screen memory, 40x25 characters, one byte per character
 COLOR_RAM  = $d800                  ; colour memory, one byte per character, same layout as the screen
 CPU_PORT   = $01                    ; processor port: bit 2 = 0 shows the character ROM at $d000 instead of I/O
-CURSOR_OFF = $cc                  ; KERNAL flag: 0 = the cursor blinks, anything else = no cursor
 
 ; ============================================================================================================
 ; [2] SPRITES (VIC-II video chip)
@@ -107,5 +107,14 @@ CIA1_PORTA = $dc00                  ; joystick port 2, bits are 0 when pressed: 
 CIA1_PORTB = $dc01                  ; keyboard rows / joystick port 1
 CIA1_DDRA  = $dc02                  ; data direction of port A: 1 = output, 0 = input (per pin)
 CIA1_DDRB  = $dc03                  ; data direction of port B
+CIA1_TA_LO = $dc04                  ; CIA 1 timer A, low byte (the KERNAL keeps it running: it times the interrupt)
 CIA1_CRA   = $dc0e                  ; CIA 1 timer A control (bit 1 = show the timer on port B pin 6)
 CIA1_CRB   = $dc0f                  ; CIA 1 timer B control (bit 1 = show the timer on port B pin 7)
+
+; ============================================================================================================
+; [7] TIMERS (CIA 2)
+; ============================================================================================================
+; Timer A counts down by one every CPU cycle while it runs, so it can measure how long a piece of code takes.
+CIA2_TA_LO = $dd04                  ; CIA 2 timer A, low byte (read: the counter, write: the start value)
+CIA2_TA_HI = $dd05                  ; CIA 2 timer A, high byte
+CIA2_CRA   = $dd0e                  ; CIA 2 timer A control (bit 0 = run, bit 4 = load the start value now)
