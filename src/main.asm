@@ -30,8 +30,9 @@
 ;       9   808-style kick           the recipe of the classic drum machine kick: a sine wave (here the triangle, the closest
 ;                                    the SID has) whose pitch falls to a FIXED fundamental: every frame the distance to
 ;                                    that fundamental is halved (177 Hz -> 50 Hz), so the first 3 frames are the click and
-;                                    the rest is the boom. Plus the octave above on voice 2 (a short pulse, the overtone that
-;                                    small speakers need) and a noise tick on voice 3.
+;                                    the rest is the boom. Plus a noise tick on voice 3 for the click. (An overtone an octave
+;                                    up on voice 2 was tried and left out: measured with reSID it was as loud as the body
+;                                    and took the bass share of the sound from 85% down to 56%.)
 ;
 ;       0-9     choose the mode
 ;       + / -   faster / slower ticks (6 speeds, from 50 Hz up to about 1600 Hz)
@@ -182,16 +183,9 @@ set_mode
 +       lda mode
         cmp #9
         bne +
-        lda #$56                    ; mode 9, voice 2 (the overtone): attack 5 (56 ms), decay 6. It is only gated for one
-        sta SID_AD2                 ; tick, so the attack does not get to the top: that makes this layer quieter
-        lda #$06                    ; sustain 0, release 6 (about 200 ms)
-        sta SID_SR2
-        lda #$00                    ; voice 3 (the click): as short as the SID can do it
+        lda #$00                    ; mode 9, voice 3 (the click): as short as the SID can do it
         sta SID_AD3
         sta SID_SR3
-        sta SID_PW2L                ; voice 2 pulse width $0400: a narrow pulse, rich in overtones
-        lda #$04
-        sta SID_PW2H
 +       lda mode
         cmp #3
         bne +
@@ -514,8 +508,6 @@ mode9
         bne +
         lda #$10                    ; body: triangle, gate off
         sta SID_CTRL1
-        lda #$40                    ; overtone: pulse, gate off
-        sta SID_CTRL2
         lda #$80                    ; click: noise, gate off
         sta SID_CTRL3
         jmp irq_done
@@ -529,16 +521,12 @@ mode9
         sta SID_FREQ3H
         lda #$81
         sta SID_CTRL3
-        lda #$41                    ; the overtone: pulse, gate on
-        sta SID_CTRL2
         lda #$11                    ; the body: triangle, gate on
         sta SID_CTRL1
         jmp m9_write
 +       cmp #1
         bne +
-        lda #$40                    ; one tick later the click and the overtone get their gate off (release starts)
-        sta SID_CTRL2
-        lda #$80
+        lda #$80                    ; one tick later the click gets its gate off (release starts)
         sta SID_CTRL3
 +       sec                         ; t = pitch - K9_END (how far above the fundamental)
         lda kick_lo
@@ -561,12 +549,6 @@ m9_write
         sta SID_FREQ1L
         lda kick_hi
         sta SID_FREQ1H
-        lda kick_lo                 ; the overtone: twice the pitch, one octave up
-        asl
-        sta SID_FREQ2L
-        lda kick_hi
-        rol
-        sta SID_FREQ2H
         ; fall through
 
 irq_done
