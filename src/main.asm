@@ -11,7 +11,7 @@
 ;       3   envelope as LFO          voice 3 plays an envelope nobody hears (muted); every tick we read it
 ;                                    from $d41c and add it to the pitch of voice 1: a hardware LFO
 ;
-; Modes 4 to 8 are techniques from the classic players (Rob Hubbard's Monty on the Run, Cybernoid II), written
+; Modes 4 to 9 are techniques from the classic players (Rob Hubbard's Monty on the Run, Cybernoid II), written
 ; from scratch. They are made for 50 ticks per second (speed 0):
 ;
 ;       4   vibrato                  the pitch swings 0-1-2-3-3-2-1-0 steps of a quarter of the distance to the
@@ -27,7 +27,13 @@
 ;                                    like a real drum) down to about 75 Hz, a triangle one octave lower on voice 3 as
 ;                                    the sub, and a one-frame noise click on voice 2
 ;
-;       0-8     choose the mode
+;       9   808-style kick           the recipe of the classic drum machine kick: a sine wave (here the triangle, the closest
+;                                    the SID has) whose pitch falls to a FIXED fundamental: every frame the distance to
+;                                    that fundamental is halved (177 Hz -> 50 Hz), so the first 3 frames are the click and
+;                                    the rest is the boom. Plus the octave above on voice 2 (a short pulse, the overtone that
+;                                    small speakers need) and a noise tick on voice 3.
+;
+;       0-9     choose the mode
 ;       + / -   faster / slower ticks (6 speeds, from 50 Hz up to about 1600 Hz)
 ;
 ; The KERNAL IRQ is driven by CIA 1 timer A. We change its start value, so the IRQ comes faster, and
@@ -43,7 +49,12 @@ SCREEN     = $0400                  ; screen memory, 40 x 25 characters
 
 TEXT_PTR   = $fb                    ; (2 bytes) print_text: where we are in the text
 JUMP_PTR   = $fd                    ; (2 bytes) irq: the address of the routine of the current mode
-MODES      = 9                      ; number of modes
+MODES      = 10                     ; number of modes
+MODE_POS   = SCREEN+40*16+6         ; where the mode digit, the speed digit and ON/OFF go on the screen
+SPEED_POS  = SCREEN+40*17+7
+SOUND_POS  = SCREEN+40*18+7
+K9_START   = $0bc0                  ; mode 9: the kick starts at 177 Hz (pitch register value, Hz = value * 0.0587)
+K9_END     = $0353                  ; ... and falls to 50 Hz                     ; number of modes
 
         * = $0801                   ; BASIC programs always start loading here
 
@@ -120,7 +131,7 @@ set_mode
         sta mode
         clc
         adc #'0'                    ; the digit as a screen code ('0' is $30 there too)
-        sta SCREEN+40*15+6          ; show it on row 15, after "mode: "
+        sta MODE_POS                    ; show it after "mode: ", after "mode: "
         lda #$ff                    ; the tick counter starts at $ff: the first IRQ makes it 0, so a drum starts at once
         sta ticks
         lda #0
@@ -169,6 +180,19 @@ set_mode
         sta SID_AD2
         sta SID_SR2
 +       lda mode
+        cmp #9
+        bne +
+        lda #$56                    ; mode 9, voice 2 (the overtone): attack 5 (56 ms), decay 6. It is only gated for one
+        sta SID_AD2                 ; tick, so the attack does not get to the top: that makes this layer quieter
+        lda #$06                    ; sustain 0, release 6 (about 200 ms)
+        sta SID_SR2
+        lda #$00                    ; voice 3 (the click): as short as the SID can do it
+        sta SID_AD3
+        sta SID_SR3
+        sta SID_PW2L                ; voice 2 pulse width $0400: a narrow pulse, rich in overtones
+        lda #$04
+        sta SID_PW2H
++       lda mode
         cmp #3
         bne +
         lda #$69                    ; mode 3, voice 3: attack 6 (68 ms), decay 9 (750 ms) ...
@@ -203,7 +227,7 @@ apply_volume
         tax
         ldy #0
 -       lda sound_text,x
-        sta SCREEN+40*17+7,y
+        sta SOUND_POS,y
         inx
         iny
         cpy #3
@@ -226,7 +250,7 @@ set_speed
         txa
         clc
         adc #'0'                    ; speed digit (screen code of '0' is $30)
-        sta SCREEN+40*16+7
+        sta SPEED_POS
         rts
 
 ; Cycles per tick: 19656 = 50 Hz, then half of that each step
@@ -249,9 +273,9 @@ irq
         jmp (JUMP_PTR)              ; ... and go there. (JMP with brackets: jump to the address stored at JUMP_PTR)
 
 mode_lo
-        !byte <irq_done, <mode1, <mode2, <mode3, <mode4, <mode5, <mode6, <mode7, <mode8
+        !byte <irq_done, <mode1, <mode2, <mode3, <mode4, <mode5, <mode6, <mode7, <mode8, <mode9
 mode_hi
-        !byte >irq_done, >mode1, >mode2, >mode3, >mode4, >mode5, >mode6, >mode7, >mode8
+        !byte >irq_done, >mode1, >mode2, >mode3, >mode4, >mode5, >mode6, >mode7, >mode8, >mode9
 
 ; --- mode 1: gate stutter ---------------------------------------------------------------------------------
 mode1
@@ -477,6 +501,72 @@ m8_write
         lda kick_lo
         ror
         sta SID_FREQ3L
+        jmp irq_done
+
+; --- mode 9: 808-style kick -------------------------------------------------------------------------------
+; Every 16 ticks. The pitch does not fall towards zero but towards a fixed fundamental (K9_END):
+; pitch = pitch - (pitch - K9_END) / 2. The distance is halved every tick, so the pitch moves fast at first (the
+; click) and then lands softly on 50 Hz (the boom).
+mode9
+        lda ticks
+        and #$0f
+        cmp #15
+        bne +
+        lda #$10                    ; body: triangle, gate off
+        sta SID_CTRL1
+        lda #$40                    ; overtone: pulse, gate off
+        sta SID_CTRL2
+        lda #$80                    ; click: noise, gate off
+        sta SID_CTRL3
+        jmp irq_done
++       cmp #0
+        bne +
+        lda #<K9_START              ; start pitch
+        sta kick_lo
+        lda #>K9_START
+        sta kick_hi
+        lda #$30                    ; the click: noise at a fixed pitch
+        sta SID_FREQ3H
+        lda #$81
+        sta SID_CTRL3
+        lda #$41                    ; the overtone: pulse, gate on
+        sta SID_CTRL2
+        lda #$11                    ; the body: triangle, gate on
+        sta SID_CTRL1
+        jmp m9_write
++       cmp #1
+        bne +
+        lda #$40                    ; one tick later the click and the overtone get their gate off (release starts)
+        sta SID_CTRL2
+        lda #$80
+        sta SID_CTRL3
++       sec                         ; t = pitch - K9_END (how far above the fundamental)
+        lda kick_lo
+        sbc #<K9_END
+        sta t_lo
+        lda kick_hi
+        sbc #>K9_END
+        sta t_hi
+        lsr t_hi                    ; t = t / 2
+        ror t_lo
+        sec                         ; pitch = pitch - t
+        lda kick_lo
+        sbc t_lo
+        sta kick_lo
+        lda kick_hi
+        sbc t_hi
+        sta kick_hi
+m9_write
+        lda kick_lo                 ; the body
+        sta SID_FREQ1L
+        lda kick_hi
+        sta SID_FREQ1H
+        lda kick_lo                 ; the overtone: twice the pitch, one octave up
+        asl
+        sta SID_FREQ2L
+        lda kick_hi
+        rol
+        sta SID_FREQ2H
         ; fall through
 
 irq_done
@@ -490,10 +580,10 @@ note_next  !word $1f02              ; A#4: one semitone higher
 
 ; per mode: attack/decay, sustain/release, and does the mode start with the gate on?
 ;                0     1     2     3     4     5     6     7
-ad_table   !byte $00, $00, $00, $00, $00, $05, $05, $00, $08       ; mode 8: attack 0, decay 8 (about 300 ms)
-sr_table   !byte $f0, $f0, $00, $f0, $f0, $00, $00, $f0, $00
-gate_table !byte 1,   1,   0,   1,   1,   0,   0,   1,   0
-vol_table  !byte $0f, $0f, $0f, $8f, $0f, $0f, $0f, $0f, $0f      ; only mode 3 mutes voice 3
+ad_table   !byte $00, $00, $00, $00, $00, $05, $05, $00, $08, $08  ; modes 8 and 9: attack 0, decay 8 (about 300 ms)
+sr_table   !byte $f0, $f0, $00, $f0, $f0, $00, $00, $f0, $00, $00
+gate_table !byte 1,   1,   0,   1,   1,   0,   0,   1,   0,   0
+vol_table  !byte $0f, $0f, $0f, $8f, $0f, $0f, $0f, $0f, $0f, $0f  ; only mode 3 mutes voice 3
 
 ; Sustain level (high nibble) in 16 steps: a smooth wave from soft to loud and back
 sustain_table
@@ -531,15 +621,16 @@ title
         !pet "6  drums from a table", 13
         !pet "7  octave arpeggio", 13
         !pet "8  bass kick", 13
+        !pet "9  808-style kick", 13
         !pet "+ -  faster / slower ticks", 13
         !pet "m    sound on / off", 13
-        !pet "(modes 4-8 are made for speed 0)", 13, 13
+        !pet "(modes 4-9 are made for speed 0)", 13, 13
         !pet "mode: 0", 13
         !pet "speed: 0", 13
         !pet "sound: on", 13, 0
 
 ; variables
-mode     !byte 0                    ; 0-8
+mode     !byte 0                    ; 0-9
 speed    !byte 0                    ; 0-5
 muted    !byte 0                    ; 1 = sound off (the M key)
 ticks    !byte 0                    ; counts IRQs
