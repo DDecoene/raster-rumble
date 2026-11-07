@@ -78,6 +78,8 @@ COLOR_LGREY = 15                    ; C64 colour number for light grey
 ; Voice 1
 SID_FREQ1L = $d400                  ; SID voice 1 frequency, low byte
 SID_FREQ1H = $d401                  ; SID voice 1 frequency, high byte
+SID_PW1L   = $d402                  ; SID voice 1 pulse width, low byte
+SID_PW1H   = $d403                  ; SID voice 1 pulse width, high nibble ($08 = square wave)
 SID_CTRL1  = $d404                  ; SID voice 1 control (bit 7 = noise, bit 0 = gate: 0 to 1 starts the sound)
 SID_AD1    = $d405                  ; SID voice 1 attack (high nibble) and decay (low nibble)
 SID_SR1    = $d406                  ; SID voice 1 sustain (high nibble) and release (low nibble)
