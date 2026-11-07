@@ -99,6 +99,8 @@ SID_SR3    = $d414                  ; SID voice 3 sustain and release
 SID_FC_HI   = $d416                 ; SID filter cutoff, high byte (the filter opens as this goes up)
 SID_RES     = $d417                 ; SID filter resonance (high nibble) and which voices go through the filter (bits 0-2)
 SID_VOLUME = $d418                  ; SID master volume (low nibble), bit 7 = mute voice 3
+SID_OSC3   = $d41b                  ; READ: the current output of voice 3's oscillator (0-255)
+SID_ENV3   = $d41c                  ; READ: the current output of voice 3's envelope (0-255), a free LFO in hardware
 
 ; ============================================================================================================
 ; [6] KEYBOARD AND JOYSTICK (CIA 1)
@@ -108,6 +110,7 @@ CIA1_PORTB = $dc01                  ; keyboard rows / joystick port 1
 CIA1_DDRA  = $dc02                  ; data direction of port A: 1 = output, 0 = input (per pin)
 CIA1_DDRB  = $dc03                  ; data direction of port B
 CIA1_TA_LO = $dc04                  ; CIA 1 timer A, low byte (the KERNAL keeps it running: it times the interrupt)
+CIA1_TA_HI = $dc05                  ; CIA 1 timer A, high byte (write: the start value for the next round)
 CIA1_CRA   = $dc0e                  ; CIA 1 timer A control (bit 1 = show the timer on port B pin 6)
 CIA1_CRB   = $dc0f                  ; CIA 1 timer B control (bit 1 = show the timer on port B pin 7)
 
