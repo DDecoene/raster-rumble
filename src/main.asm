@@ -34,10 +34,12 @@
 ;                                    up on voice 2 was tried and left out: measured with reSID it was as loud as the body
 ;                                    and took the bass share of the sound from 85% down to 56%.)
 ;
-;       b   beat                     a drum pattern of 16 steps (6 ticks each, 125 BPM) with the mode 9 kick, a noise
-;                                    snare and a noise hi-hat. The kick owns voices 1 and 3, the snare and the hat share
-;                                    voice 2 (they never need it at the same moment: the snare wins). One tick before a
-;                                    drum comes we switch its gate off, so the envelope can start again (gate 1 -> 0 -> 1).
+;       b   beat                     four on the floor, 16 steps of 6 ticks (125 BPM): a kick on every beat, a snare on
+;                                    beats 2 and 4, a hat on the off-beats. ALL the drums play on voice 1: a table gives
+;                                    the waveform and pitch for every tick, so voices 2 and 3 are free for a bass and a
+;                                    melody later. When kick and snare fall together the voice plays 3 ticks of kick,
+;                                    a gap, then the snare: one voice, one drum at a time. One tick before a new drum
+;                                    we switch the gate off, so the envelope can start again (gate 1 -> 0 -> 1).
 ;
 ;       0-9     choose the mode, B = the beat
 ;       + / -   faster / slower ticks (6 speeds, from 50 Hz up to about 1600 Hz)
@@ -202,21 +204,15 @@ set_mode
 +       lda mode
         cmp #10
         bne +
-        lda #$00                    ; mode 10: the click on voice 3 is as short as the SID can do it ...
-        sta SID_AD3
-        sta SID_SR3
-        sta SID_SR2                 ; ... and voice 2 (snare, hat) has no sustain: it just dies away
+        lda #0                      ; mode 10: only voice 1 plays, the other two stay silent
+        sta SID_CTRL2
+        sta SID_CTRL3
+        lda #NO_DRUM                ; no drum yet
+        sta drum_base
         lda #5                      ; sub-tick: the first IRQ makes it 6 = the start of a step, so the beat starts at once ...
         sta sub
         lda #15                     ; ... and the step counter wraps from 15 to step 0
         sta bar_step
-        lda #0
-        sta v2kind
-        sta sn_pos
-        lda #<K9_END                ; the kick body rests on its fundamental until the first kick
-        sta kick_lo
-        lda #>K9_END
-        sta kick_hi
 +       lda mode
         cmp #3
         bne +
@@ -583,31 +579,16 @@ m9_write
         jmp irq_done
 
 ; --- mode 10: the beat ------------------------------------------------------------------------------------
-; 1 step = 6 ticks = 120 ms, 16 steps = one bar. pattern[step] says which drums start on that step.
+; All the drums play on ONE voice (voice 1), the way the classic tunes do it: a table gives the waveform and the
+; pitch of the drum for every tick. 1 step = 6 ticks = 120 ms, 16 steps = one bar.
+; pattern[step] says which drums start on that step; hit_base[hits] says where that drum sits in the tables.
 mode10
-        ; 1. the kick pitch halves its distance to the fundamental, on every tick (the same maths as mode 9)
-        sec
-        lda kick_lo
-        sbc #<K9_END
-        sta t_lo
-        lda kick_hi
-        sbc #>K9_END
-        sta t_hi
-        lsr t_hi
-        ror t_lo
-        sec
-        lda kick_lo
-        sbc t_lo
-        sta kick_lo
-        lda kick_hi
-        sbc t_hi
-        sta kick_hi
-
-        ; 2. count ticks; on the first tick of a step, start the drums of that step
         inc sub
         lda sub
         cmp #6
-        bcc m10_play                ; still inside a step
+        bcs m10_newstep             ; a new step starts ...
+        jmp m10_play                ; ... or we are still inside one (a branch cannot reach that far)
+m10_newstep
         lda #0
         sta sub
         inc bar_step
@@ -616,62 +597,36 @@ mode10
         sta bar_step
         tax
         lda pattern,x
-        sta hits
-        and #HIT_KICK
-        beq m10_snare
-        lda #<K9_START              ; kick: start the pitch high, noise click on voice 3, gate on for the body
-        sta kick_lo
-        lda #>K9_START
-        sta kick_hi
-        lda #$30
-        sta SID_FREQ3H
-        lda #$81
-        sta SID_CTRL3
-        lda #$11
-        sta SID_CTRL1
-m10_snare
-        lda hits
-        and #HIT_SNARE
-        beq m10_hat
-        lda #$05                    ; snare: decay 5 (168 ms)
-        sta SID_AD2
+        tax                         ; X = the hits of this step (0-7)
+        lda hit_base,x
+        cmp #NO_DRUM
+        beq m10_play                ; nothing starts: the drum of an earlier step just plays on
+        sta drum_base
         lda #0
-        sta sn_pos                  ; the pitch table starts at its first entry
-        lda #1
-        sta v2kind
-        lda #$81                    ; noise, gate on
-        sta SID_CTRL2
-        jmp m10_play                ; the snare wins: no hat on this step
-m10_hat
-        lda hits
-        and #HIT_HAT
-        beq m10_play
-        lda #$01                    ; hat: decay 1 (24 ms), very short
-        sta SID_AD2
-        lda #2
-        sta v2kind
-        lda #$d0                    ; noise at a high pitch: a hiss
-        sta SID_FREQ2H
-        lda #$81
-        sta SID_CTRL2
+        sta drum_tick               ; start at the first tick of that drum
+        lda hit_ad,x                ; every drum has its own decay
+        sta SID_AD1
 
-        ; 3. things that change on every tick: the kick pitch and the snare pitch
+        ; per tick: waveform and pitch of the drum, straight from the tables
 m10_play
-        lda kick_lo
+        lda drum_base
+        cmp #NO_DRUM
+        beq m10_gate                ; no drum has played yet
+        clc
+        adc drum_tick
+        tax
+        lda drum_wave10,x
+        sta SID_CTRL1
+        lda #0
         sta SID_FREQ1L
-        lda kick_hi
+        lda drum_freq10,x
         sta SID_FREQ1H
-        lda v2kind
-        cmp #1
-        bne m10_gate                ; no snare playing
-        ldx sn_pos
-        lda snare_freq,x            ; the snare pitch falls along a table ...
-        sta SID_FREQ2H
-        cpx #SNARE_LEN-1
-        bcs m10_gate                ; ... and stays at the last value
-        inc sn_pos
+        lda drum_tick
+        cmp #DRUM_LEN-1
+        bcs m10_gate                ; after the last tick the drum has died away: stay on the last row
+        inc drum_tick
 
-        ; 4. one tick before the next step: gate off for the voices that start again (hard restart)
+        ; one tick before the next step: gate off when a drum starts there (hard restart)
 m10_gate
         lda sub
         cmp #5
@@ -682,18 +637,12 @@ m10_gate
         and #$0f
         tax
         lda pattern,x
-        sta hits
-        and #HIT_KICK
-        beq +
-        lda #$10                    ; body: triangle, gate off
-        sta SID_CTRL1
-        lda #$80                    ; click: noise, gate off
-        sta SID_CTRL3
-+       lda hits
-        and #HIT_SNARE|HIT_HAT
+        tax
+        lda hit_base,x
+        cmp #NO_DRUM
         beq m10_done
-        lda #$80                    ; voice 2: noise, gate off
-        sta SID_CTRL2
+        lda #$80                    ; noise, gate off
+        sta SID_CTRL1
 m10_done
         ; fall through
 
@@ -720,15 +669,29 @@ sustain_table
 
 ; Mode 10: what starts on each of the 16 steps (bit 0 kick, bit 1 snare, bit 2 hat). Four on the floor: a kick on
 ; every beat (steps 0, 4, 8, 12), the snare on beats 2 and 4 (steps 4 and 12, on top of the kick) and a hat on every
-; off-beat (steps 2, 6, 10, 14). The kick lives on voices 1 and 3, the snare on voice 2, so they can sound together.
+; off-beat (steps 2, 6, 10, 14). There is only one voice, so a step with kick AND snare is its own drum.
 HIT_KICK   = 1
 HIT_SNARE  = 2
 HIT_HAT    = 4
-SNARE_LEN  = 12
+NO_DRUM    = $ff
+DRUM_LEN   = 12                     ; ticks per drum in the tables below
 pattern    !byte HIT_KICK, 0, HIT_HAT, 0, HIT_KICK|HIT_SNARE, 0, HIT_HAT, 0
            !byte HIT_KICK, 0, HIT_HAT, 0, HIT_KICK|HIT_SNARE, 0, HIT_HAT, 0
-; the snare pitch (high byte of the noise frequency), one value per tick: bright and falling
-snare_freq !byte $60, $58, $50, $48, $40, $3c, $38, $34, $30, $30, $30, $30
+; per combination of hits (0-7): where its drum starts in the tables (0 kick, 12 snare, 24 hat, 36 kick + snare)
+; and its decay. The most important drum wins: kick + hat is a kick, snare + hat is a snare.
+;                 0        K   S   K+S H   K+H S+H K+S+H
+hit_base   !byte NO_DRUM,  0, 12, 36, 24,  0, 12, 36
+hit_ad     !byte $00,     $08,$05,$05,$01,$08,$05,$05
+
+; Mode 10 drum tables, DRUM_LEN ticks each. The waveform byte carries the gate bit, the frequency is the high byte.
+drum_wave10 !byte $81, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11    ; kick: noise click, then triangle
+            !byte $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81    ; snare: noise
+            !byte $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81    ; hat: noise
+            !byte $81, $11, $11, $80, $81, $81, $81, $81, $81, $81, $81, $81    ; kick, a gap (gate off), snare
+drum_freq10 !byte $0b, $08, $06, $05, $04, $04, $03, $03, $03, $03, $03, $03    ; kick: the pitch falls to 50 Hz
+            !byte $60, $58, $50, $48, $40, $3c, $38, $34, $30, $30, $30, $30    ; snare: bright and falling
+            !byte $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0    ; hat: a high hiss
+            !byte $0b, $08, $06, $60, $60, $58, $50, $48, $40, $3c, $38, $34    ; kick, gap, snare
 
 ; Drum tables, 8 frames each: the first 8 are a kick, the next 8 a snare
 ;                 frame: 0    1    2    3    4    5    6    7
@@ -789,6 +752,5 @@ t_lo     !byte 0                    ; mode 8: working space for pitch / 4
 t_hi     !byte 0
 sub      !byte 0                    ; mode 10: tick inside the step (0-5)
 bar_step !byte 0                    ; mode 10: step inside the bar (0-15)
-hits     !byte 0                    ; mode 10: the drums of the current / next step
-v2kind   !byte 0                    ; mode 10: what voice 2 plays: 0 nothing, 1 snare, 2 hat
-sn_pos   !byte 0                    ; mode 10: position in snare_freq
+drum_base !byte 0                   ; mode 10: where the current drum starts in the tables (NO_DRUM = none yet)
+drum_tick !byte 0                   ; mode 10: tick inside the current drum (0-11)
