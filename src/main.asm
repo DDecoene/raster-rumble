@@ -718,14 +718,15 @@ sustain_table
         !byte $20, $40, $60, $80, $a0, $c0, $e0, $f0
         !byte $f0, $e0, $c0, $a0, $80, $60, $40, $20
 
-; Mode 10: what starts on each of the 16 steps (bit 0 kick, bit 1 snare, bit 2 hat). Kicks on 0, 8 and 10, snares on
-; 4 and 12 (the "backbeat"), hats on the off-beats 2, 6, 10, 14 and on the kicks.
+; Mode 10: what starts on each of the 16 steps (bit 0 kick, bit 1 snare, bit 2 hat). Four on the floor: a kick on
+; every beat (steps 0, 4, 8, 12), the snare on beats 2 and 4 (steps 4 and 12, on top of the kick) and a hat on every
+; off-beat (steps 2, 6, 10, 14). The kick lives on voices 1 and 3, the snare on voice 2, so they can sound together.
 HIT_KICK   = 1
 HIT_SNARE  = 2
 HIT_HAT    = 4
 SNARE_LEN  = 12
-pattern    !byte HIT_KICK|HIT_HAT, 0, HIT_HAT, 0, HIT_SNARE, 0, HIT_HAT, 0
-           !byte HIT_KICK|HIT_HAT, 0, HIT_KICK|HIT_HAT, 0, HIT_SNARE, 0, HIT_HAT, 0
+pattern    !byte HIT_KICK, 0, HIT_HAT, 0, HIT_KICK|HIT_SNARE, 0, HIT_HAT, 0
+           !byte HIT_KICK, 0, HIT_HAT, 0, HIT_KICK|HIT_SNARE, 0, HIT_HAT, 0
 ; the snare pitch (high byte of the noise frequency), one value per tick: bright and falling
 snare_freq !byte $60, $58, $50, $48, $40, $3c, $38, $34, $30, $30, $30, $30
 
