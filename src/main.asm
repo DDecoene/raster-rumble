@@ -34,7 +34,12 @@
 ;                                    up on voice 2 was tried and left out: measured with reSID it was as loud as the body
 ;                                    and took the bass share of the sound from 85% down to 56%.)
 ;
-;       0-9     choose the mode
+;       b   beat                     a drum pattern of 16 steps (6 ticks each, 125 BPM) with the mode 9 kick, a noise
+;                                    snare and a noise hi-hat. The kick owns voices 1 and 3, the snare and the hat share
+;                                    voice 2 (they never need it at the same moment: the snare wins). One tick before a
+;                                    drum comes we switch its gate off, so the envelope can start again (gate 1 -> 0 -> 1).
+;
+;       0-9     choose the mode, B = the beat
 ;       + / -   faster / slower ticks (6 speeds, from 50 Hz up to about 1600 Hz)
 ;
 ; The KERNAL IRQ is driven by CIA 1 timer A. We change its start value, so the IRQ comes faster, and
@@ -51,9 +56,9 @@ SCREEN     = $0400                  ; screen memory, 40 x 25 characters
 TEXT_PTR   = $fb                    ; (2 bytes) print_text: where we are in the text
 JUMP_PTR   = $fd                    ; (2 bytes) irq: the address of the routine of the current mode
 MODES      = 10                     ; number of modes
-MODE_POS   = SCREEN+40*16+6         ; where the mode digit, the speed digit and ON/OFF go on the screen
-SPEED_POS  = SCREEN+40*17+7
-SOUND_POS  = SCREEN+40*18+7
+MODE_POS   = SCREEN+40*17+6         ; where the mode digit, the speed digit and ON/OFF go on the screen
+SPEED_POS  = SCREEN+40*18+7
+SOUND_POS  = SCREEN+40*19+7
 K9_START   = $0bc0                  ; mode 9: the kick starts at 177 Hz (pitch register value, Hz = value * 0.0587)
 K9_END     = $0353                  ; ... and falls to 50 Hz                     ; number of modes
 
@@ -101,6 +106,11 @@ main_loop
         sbc #'0'                    ; '0'.. -> 0..
         jsr set_mode
         jmp main_loop
++       cmp #$42                    ; 'B': mode 10, the beat
+        bne +
+        lda #10
+        jsr set_mode
+        jmp main_loop
 +       cmp #$4d                    ; 'M': sound on / off
         bne +
         lda muted
@@ -132,7 +142,10 @@ set_mode
         sta mode
         clc
         adc #'0'                    ; the digit as a screen code ('0' is $30 there too)
-        sta MODE_POS                    ; show it after "mode: ", after "mode: "
+        cmp #'0'+10
+        bcc +
+        lda #2                      ; mode 10 has no digit: show a 'b' (screen code 2)
++       sta MODE_POS                ; show it after "mode: "
         lda #$ff                    ; the tick counter starts at $ff: the first IRQ makes it 0, so a drum starts at once
         sta ticks
         lda #0
@@ -186,6 +199,24 @@ set_mode
         lda #$00                    ; mode 9, voice 3 (the click): as short as the SID can do it
         sta SID_AD3
         sta SID_SR3
++       lda mode
+        cmp #10
+        bne +
+        lda #$00                    ; mode 10: the click on voice 3 is as short as the SID can do it ...
+        sta SID_AD3
+        sta SID_SR3
+        sta SID_SR2                 ; ... and voice 2 (snare, hat) has no sustain: it just dies away
+        lda #5                      ; sub-tick: the first IRQ makes it 6 = the start of a step, so the beat starts at once ...
+        sta sub
+        lda #15                     ; ... and the step counter wraps from 15 to step 0
+        sta bar_step
+        lda #0
+        sta v2kind
+        sta sn_pos
+        lda #<K9_END                ; the kick body rests on its fundamental until the first kick
+        sta kick_lo
+        lda #>K9_END
+        sta kick_hi
 +       lda mode
         cmp #3
         bne +
@@ -267,9 +298,9 @@ irq
         jmp (JUMP_PTR)              ; ... and go there. (JMP with brackets: jump to the address stored at JUMP_PTR)
 
 mode_lo
-        !byte <irq_done, <mode1, <mode2, <mode3, <mode4, <mode5, <mode6, <mode7, <mode8, <mode9
+        !byte <irq_done, <mode1, <mode2, <mode3, <mode4, <mode5, <mode6, <mode7, <mode8, <mode9, <mode10
 mode_hi
-        !byte >irq_done, >mode1, >mode2, >mode3, >mode4, >mode5, >mode6, >mode7, >mode8, >mode9
+        !byte >irq_done, >mode1, >mode2, >mode3, >mode4, >mode5, >mode6, >mode7, >mode8, >mode9, >mode10
 
 ; --- mode 1: gate stutter ---------------------------------------------------------------------------------
 mode1
@@ -549,6 +580,121 @@ m9_write
         sta SID_FREQ1L
         lda kick_hi
         sta SID_FREQ1H
+        jmp irq_done
+
+; --- mode 10: the beat ------------------------------------------------------------------------------------
+; 1 step = 6 ticks = 120 ms, 16 steps = one bar. pattern[step] says which drums start on that step.
+mode10
+        ; 1. the kick pitch halves its distance to the fundamental, on every tick (the same maths as mode 9)
+        sec
+        lda kick_lo
+        sbc #<K9_END
+        sta t_lo
+        lda kick_hi
+        sbc #>K9_END
+        sta t_hi
+        lsr t_hi
+        ror t_lo
+        sec
+        lda kick_lo
+        sbc t_lo
+        sta kick_lo
+        lda kick_hi
+        sbc t_hi
+        sta kick_hi
+
+        ; 2. count ticks; on the first tick of a step, start the drums of that step
+        inc sub
+        lda sub
+        cmp #6
+        bcc m10_play                ; still inside a step
+        lda #0
+        sta sub
+        inc bar_step
+        lda bar_step
+        and #$0f                    ; 16 steps, then round again
+        sta bar_step
+        tax
+        lda pattern,x
+        sta hits
+        and #HIT_KICK
+        beq m10_snare
+        lda #<K9_START              ; kick: start the pitch high, noise click on voice 3, gate on for the body
+        sta kick_lo
+        lda #>K9_START
+        sta kick_hi
+        lda #$30
+        sta SID_FREQ3H
+        lda #$81
+        sta SID_CTRL3
+        lda #$11
+        sta SID_CTRL1
+m10_snare
+        lda hits
+        and #HIT_SNARE
+        beq m10_hat
+        lda #$05                    ; snare: decay 5 (168 ms)
+        sta SID_AD2
+        lda #0
+        sta sn_pos                  ; the pitch table starts at its first entry
+        lda #1
+        sta v2kind
+        lda #$81                    ; noise, gate on
+        sta SID_CTRL2
+        jmp m10_play                ; the snare wins: no hat on this step
+m10_hat
+        lda hits
+        and #HIT_HAT
+        beq m10_play
+        lda #$01                    ; hat: decay 1 (24 ms), very short
+        sta SID_AD2
+        lda #2
+        sta v2kind
+        lda #$d0                    ; noise at a high pitch: a hiss
+        sta SID_FREQ2H
+        lda #$81
+        sta SID_CTRL2
+
+        ; 3. things that change on every tick: the kick pitch and the snare pitch
+m10_play
+        lda kick_lo
+        sta SID_FREQ1L
+        lda kick_hi
+        sta SID_FREQ1H
+        lda v2kind
+        cmp #1
+        bne m10_gate                ; no snare playing
+        ldx sn_pos
+        lda snare_freq,x            ; the snare pitch falls along a table ...
+        sta SID_FREQ2H
+        cpx #SNARE_LEN-1
+        bcs m10_gate                ; ... and stays at the last value
+        inc sn_pos
+
+        ; 4. one tick before the next step: gate off for the voices that start again (hard restart)
+m10_gate
+        lda sub
+        cmp #5
+        bne m10_done
+        lda bar_step                ; look at the step that comes next
+        clc
+        adc #1
+        and #$0f
+        tax
+        lda pattern,x
+        sta hits
+        and #HIT_KICK
+        beq +
+        lda #$10                    ; body: triangle, gate off
+        sta SID_CTRL1
+        lda #$80                    ; click: noise, gate off
+        sta SID_CTRL3
++       lda hits
+        and #HIT_SNARE|HIT_HAT
+        beq m10_done
+        lda #$80                    ; voice 2: noise, gate off
+        sta SID_CTRL2
+m10_done
         ; fall through
 
 irq_done
@@ -562,15 +708,26 @@ note_next  !word $1f02              ; A#4: one semitone higher
 
 ; per mode: attack/decay, sustain/release, and does the mode start with the gate on?
 ;                0     1     2     3     4     5     6     7
-ad_table   !byte $00, $00, $00, $00, $00, $05, $05, $00, $08, $08  ; modes 8 and 9: attack 0, decay 8 (about 300 ms)
-sr_table   !byte $f0, $f0, $00, $f0, $f0, $00, $00, $f0, $00, $00
-gate_table !byte 1,   1,   0,   1,   1,   0,   0,   1,   0,   0
-vol_table  !byte $0f, $0f, $0f, $8f, $0f, $0f, $0f, $0f, $0f, $0f  ; only mode 3 mutes voice 3
+ad_table   !byte $00, $00, $00, $00, $00, $05, $05, $00, $08, $08, $08  ; modes 8 and 9: attack 0, decay 8 (about 300 ms)
+sr_table   !byte $f0, $f0, $00, $f0, $f0, $00, $00, $f0, $00, $00, $00
+gate_table !byte 1,   1,   0,   1,   1,   0,   0,   1,   0,   0,   0
+vol_table  !byte $0f, $0f, $0f, $8f, $0f, $0f, $0f, $0f, $0f, $0f, $0f  ; only mode 3 mutes voice 3
 
 ; Sustain level (high nibble) in 16 steps: a smooth wave from soft to loud and back
 sustain_table
         !byte $20, $40, $60, $80, $a0, $c0, $e0, $f0
         !byte $f0, $e0, $c0, $a0, $80, $60, $40, $20
+
+; Mode 10: what starts on each of the 16 steps (bit 0 kick, bit 1 snare, bit 2 hat). Kicks on 0, 8 and 10, snares on
+; 4 and 12 (the "backbeat"), hats on the off-beats 2, 6, 10, 14 and on the kicks.
+HIT_KICK   = 1
+HIT_SNARE  = 2
+HIT_HAT    = 4
+SNARE_LEN  = 12
+pattern    !byte HIT_KICK|HIT_HAT, 0, HIT_HAT, 0, HIT_SNARE, 0, HIT_HAT, 0
+           !byte HIT_KICK|HIT_HAT, 0, HIT_KICK|HIT_HAT, 0, HIT_SNARE, 0, HIT_HAT, 0
+; the snare pitch (high byte of the noise frequency), one value per tick: bright and falling
+snare_freq !byte $60, $58, $50, $48, $40, $3c, $38, $34, $30, $30, $30, $30
 
 ; Drum tables, 8 frames each: the first 8 are a kick, the next 8 a snare
 ;                 frame: 0    1    2    3    4    5    6    7
@@ -604,15 +761,16 @@ title
         !pet "7  octave arpeggio", 13
         !pet "8  bass kick", 13
         !pet "9  808-style kick", 13
+        !pet "b  beat: kick, snare, hat", 13
         !pet "+ -  faster / slower ticks", 13
         !pet "m    sound on / off", 13
-        !pet "(modes 4-9 are made for speed 0)", 13, 13
+        !pet "(modes 4-b are made for speed 0)", 13, 13
         !pet "mode: 0", 13
         !pet "speed: 0", 13
         !pet "sound: on", 13, 0
 
 ; variables
-mode     !byte 0                    ; 0-9
+mode     !byte 0                    ; 0-10
 speed    !byte 0                    ; 0-5
 muted    !byte 0                    ; 1 = sound off (the M key)
 ticks    !byte 0                    ; counts IRQs
@@ -628,3 +786,8 @@ kick_lo  !byte 0                    ; mode 8: the pitch of the kick body (16 bit
 kick_hi  !byte 0
 t_lo     !byte 0                    ; mode 8: working space for pitch / 4
 t_hi     !byte 0
+sub      !byte 0                    ; mode 10: tick inside the step (0-5)
+bar_step !byte 0                    ; mode 10: step inside the bar (0-15)
+hits     !byte 0                    ; mode 10: the drums of the current / next step
+v2kind   !byte 0                    ; mode 10: what voice 2 plays: 0 nothing, 1 snare, 2 hat
+sn_pos   !byte 0                    ; mode 10: position in snare_freq
