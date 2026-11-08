@@ -37,8 +37,8 @@
 ;       b   beat                     four on the floor, 16 steps of 6 ticks (125 BPM): a kick on every beat, a snare on
 ;                                    beats 2 and 4, a hat on the off-beats. ALL the drums play on voice 1: a table gives
 ;                                    the waveform and pitch for every tick, so voices 2 and 3 are free for a bass and a
-;                                    melody later. When kick and snare fall together the voice plays 3 ticks of kick,
-;                                    a gap, then the snare: one voice, one drum at a time. One tick before a new drum
+;                                    melody later. When kick and snare fall together the voice plays 1 tick of kick
+;                                    and then the snare: one voice, one drum at a time. One tick before a new drum
 ;                                    we switch the gate off, so the envelope can start again (gate 1 -> 0 -> 1).
 ;
 ;       0-9     choose the mode, B = the beat
@@ -687,11 +687,11 @@ hit_ad     !byte $00,     $08,$05,$05,$01,$08,$05,$05
 drum_wave10 !byte $81, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11    ; kick: noise click, then triangle
             !byte $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81    ; snare: noise
             !byte $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81    ; hat: noise
-            !byte $81, $11, $11, $80, $81, $81, $81, $81, $81, $81, $81, $81    ; kick, a gap (gate off), snare
+            !byte $11, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81, $81    ; 1 tick kick thump, then the snare
 drum_freq10 !byte $0b, $08, $06, $05, $04, $04, $03, $03, $03, $03, $03, $03    ; kick: the pitch falls to 50 Hz
             !byte $60, $58, $50, $48, $40, $3c, $38, $34, $30, $30, $30, $30    ; snare: bright and falling
             !byte $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0, $d0    ; hat: a high hiss
-            !byte $0b, $08, $06, $60, $60, $58, $50, $48, $40, $3c, $38, $34    ; kick, gap, snare
+            !byte $08, $60, $58, $50, $48, $40, $3c, $38, $34, $30, $30, $30    ; kick thump, snare
 
 ; Drum tables, 8 frames each: the first 8 are a kick, the next 8 a snare
 ;                 frame: 0    1    2    3    4    5    6    7
