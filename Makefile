@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all clean emu serve test stop version d64 dist vice
+.PHONY: all clean emu serve test stop version d64 dist vice site site-serve
 
 all: $(OUT)
 
@@ -29,6 +29,15 @@ dist: $(OUT) $(D64)
 	@mkdir -p build/dist
 	cp $(OUT) build/dist/$(NAME)-v$(VERSION).prg
 	cp $(D64) build/dist/$(NAME)-v$(VERSION).d64
+
+# the web site (landing page and play page) in build/site, for GitHub Pages (see docs/design-landing-page.md)
+site: $(OUT)
+	tools/site.sh
+
+# build the site for http://127.0.0.1:8001 and serve it there, to look at it before a release (stop with Ctrl-C)
+site-serve: $(OUT)
+	tools/site.sh http://127.0.0.1:8001
+	python3 tools/site-serve.py 8001
 
 # the vc64web browser emulator, fetched once into tools/vc64web (about 26 MB, not part of the repo)
 tools/vc64web:
