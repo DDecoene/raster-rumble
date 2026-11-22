@@ -6,6 +6,8 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 **[▶ Play it now in your browser](https://vc64web.github.io/#openROMS=true#port2=true#https://raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg)** (nothing to install: arrow keys steer, Space is fire, any key starts. The first start takes a few seconds)
 
+**Music and sound effects made with [WebSidTracker](https://github.com/DDecoene/WebSidTracker)**, a SID tracker that runs in the browser, with a small 6502 player for games (by the same author, made for this game). The tune and the effects are one tracker project, [`music/raster-rumble.json`](music/raster-rumble.json): load it in the [online tracker](https://ddecoene.github.io/WebSidTracker/tracker.html) (Open) to hear it, see it and change it. How the game uses it: [Sound](#sound).
+
 ![Gameplay: the Glitch and enemies that drift sideways](docs/screenshots/gameplay.gif)
 
 | Title | Chapter screen |
@@ -16,7 +18,7 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 | **Game over** | |
 | ![Game over screen](docs/screenshots/gameover.png) | |
 
-A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top), and between the score and the lives the clock shows how far into the night you are (`23:00` to `07:00`). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a looping arpeggio plays while you dodge; the music and the sound effects are made in [WebSidTracker](https://github.com/DDecoene/WebSidTracker) and played by its player. After 25 dodges a chapter screen opens and the next hour of the night begins. In the second chapter (01:00) the Glitch, a second falling enemy that suddenly speeds up, joins in. From the third chapter (03:00, The Border) on, half of the enemies drift sideways while they fall and bounce off the left and right edges.
+A title screen waits for a key (or the joystick) before the game starts. You fly a ship along the bottom of the screen and dodge a falling enemy. Every dodge scores a point. The enemy gets faster as your score climbs and drifts toward you while it falls. You have 5 lives (`lives` at the top), and between the score and the lives the clock shows how far into the night you are (`23:00` to `07:00`). A hit flashes the border, plays an explosion and costs a life. After the last one a game over screen waits for any key, then a new game starts with score 000. The best score stays on screen as `hi`. Stars scroll behind the action and a dark, industrial techno loop plays while you dodge; the music and the sound effects are made in [WebSidTracker](https://github.com/DDecoene/WebSidTracker) and played by its player. After 25 dodges a chapter screen opens and the next hour of the night begins. In the second chapter (01:00) the Glitch, a second falling enemy that suddenly speeds up, joins in. From the third chapter (03:00, The Border) on, half of the enemies drift sideways while they fall and bounce off the left and right edges.
 
 ## Tools
 
@@ -30,7 +32,7 @@ A title screen waits for a key (or the joystick) before the game starts. You fly
 
     make        # assembles build/raster-rumble.prg
     make test   # builds, then runs it in the browser emulator (see below)
-    make vice   # builds, then runs it in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice)
+    make vice   # builds, then runs it in VICE (x64sc, the accurate emulator, with a 6581 SID: use it to judge the sound; brew install vice)
     make clean
 
 Controls: joystick in port 2. In the browser emulator (`make test`) the arrow keys are the joystick (port 2), and Space is fire.
@@ -113,7 +115,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     .vscode/              build task, test task, launch config
     Makefile              command-line build
 
-Every line of every file is commented (the files in `src/sound/` come from the tracker as they are). `main.asm` pulls the others in with `!source`, in the order they should sit in memory: code first, then data, then the sprites at `$2000`, then the sound at `$3000`. A build check stops when the code and data reach `$2000`; there are only a few dozen bytes left below it. `hardware.asm` and `config.asm` only contain names, so they use no memory. When you add a file, add a `!source` line for it in `main.asm` (paths are relative to the project folder) and check that the sprites still start at `$2000`. The Makefile rebuilds when any file in `src/` changes.
+Every line of every file is commented (the files in `src/sound/` come from the tracker as they are). `main.asm` pulls the others in with `!source`, in the order they should sit in memory: code first, then data, then the sprites at `$2000`, then the sound at `$3000`. A build check stops when the code and data reach `$2000`; there are only a few dozen bytes left below it. `hardware.asm` and `config.asm` only contain names, so they use no memory. When you add a file, add a `!source` line for it in `main.asm` (paths are relative to the project folder) and check that the sprites still start at `$2000`. The Makefile rebuilds when any file in `src/` or `src/sound/` changes.
 
 ## How it works
 
@@ -181,10 +183,10 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 All sound comes from the player of [WebSidTracker](https://github.com/DDecoene/WebSidTracker), a SID tracker in the browser. The game writes nothing to the SID itself.
 
 - **The project.** `music/raster-rumble.json` holds the tune and the sound effects. Open it in the tracker (Open), change it while it plays, Save it back, then Export and put `instruments.asm`, `sfx.asm` and `song_raster_rumble.asm` in `src/sound/`; `make vice` builds and runs the game with them. `src/sound/README.md` has the details and the licence (those files are MIT, the rest of the game CC BY-NC-SA).
-- **The tune** is the old one, note for note: a saw bass on voice 1 (A1 F1 C2 G1), a plucked pulse arpeggio on voice 2 (32 notes, A minor, F, C, G, with a pulse sweep), and a kick and a hat on voice 3. It runs at speed 1 (a tick is a frame): an arpeggio note lasts 7 frames, a bass note 28, a bar 56, exactly the tempo of the old 100 Hz tune. The old filter sweep is gone (the player has no filter).
+- **The tune** is dark and industrial, made for the 6581 SID: 125 BPM (speed 1, 6 frames a sixteenth, 96 a bar), 12 bars that loop (about 23 seconds). Voice 1 a gritty pulse bass in sixteenths that jumps an octave (A, A, B flat, G); voice 2 a cold lead, a triangle ring-modulated by the bass (so its metal colour changes with every bass note), with a late vibrato, silent for the first 4 bars; voice 3 the kick (four on the floor), a metal hat and, after the intro, a snare.
 - **The player** starts the tune once (`music_init` in `main.asm`) and runs once per frame through `update_music` (`src/sound.asm`): in the game at the end of `game_bars`, below the plasma; on the title, game over and chapter screens after the raster bars. After `music_play`, `update_music` looks at the player's state of voice 3 (`st_age`, `st_instr`): when a note of the kick (`SND_KICK`, instrument 2 of the project) starts, the raster bars are pushed on, so they pump with the beat.
-- **Sound effects** borrow a voice; the music of that voice keeps time and comes back at its next note. A dodge plays `SFX_DODGE` on voice 3 (`score_point` in `score.asm`), a new chapter `SFX_CHAPTER` on voice 3 (`chapter_screen`), a hit `SFX_HIT` on voice 3 and `SFX_HIT_BODY` on voice 1 at the same time (the hit code in `main.asm`), so the arpeggio on voice 2 always goes on.
-- **Time.** `music_play` takes about 2000 to 6000 of the 19,656 cycles of a frame. To make room on the title screens, `update_stars` has a quick path for a star that stays in its cell, and the scroller colours, the tagline, the prompt and the clearing of the bouncing letters are written out instead of looped. Measured in VICE: the title work ends at most 148 of the 156 free lines after the bars; in the game the first scroll band was never more than one line late in 3244 frames.
+- **Sound effects** borrow a voice; the music of that voice keeps time and comes back at its next note. A dodge plays `SFX_DODGE` on voice 3 (`score_point` in `score.asm`), a new chapter `SFX_CHAPTER` on voice 3 (`chapter_screen`), a hit `SFX_HIT` on voice 3 and `SFX_HIT_BODY` on voice 1 at the same time (the hit code in `main.asm`), so the lead on voice 2 always goes on.
+- **Time.** `music_play` takes about 2000 to 6000 of the 19,656 cycles of a frame. To make room on the title screens, `update_stars` has a quick path for a star that stays in its cell, and the scroller colours, the tagline, the prompt and the clearing of the bouncing letters are written out instead of looped. Measured in VICE (6581): with the current tune the title work ends at most 153 of the 156 free lines after the bars (about 12,000 frames); in the game the first scroll band was never more than one line late in 3244 frames (with the first tune), and the current tune is not later than that one.
 
 ### Joystick and the keyboard
 

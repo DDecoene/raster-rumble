@@ -23,24 +23,24 @@ sfx_count
 sfx_0    ; Dodge
         !byte 1                         ; speed: frames per tick
         !byte $61, 4                    ; instrument 4
-        !byte $3C, 7                    ; C-5, 7 ticks
+        !byte $48, 6                    ; C-6, 6 ticks
         !byte $FF                       ; end of the effect
 
 sfx_1    ; Chapter
         !byte 1                         ; speed: frames per tick
         !byte $61, 5                    ; instrument 5
-        !byte $4E, 10                    ; F#6, 10 ticks
-        !byte $53, 30                    ; B-6, 30 ticks
+        !byte $39, 24                    ; A-4, 24 ticks
+        !byte $33, 36                    ; D#4, 36 ticks
         !byte $FF                       ; end of the effect
 
 sfx_2    ; Hit
         !byte 1                         ; speed: frames per tick
         !byte $61, 6                    ; instrument 6
-        !byte $45, 50                    ; A-5, 50 ticks
+        !byte $3C, 50                    ; C-5, 50 ticks
         !byte $FF                       ; end of the effect
 
 sfx_3    ; Hit body
         !byte 1                         ; speed: frames per tick
         !byte $61, 7                    ; instrument 7
-        !byte $28, 30                    ; E-3, 30 ticks
+        !byte $21, 30                    ; A-2, 30 ticks
         !byte $FF                       ; end of the effect
