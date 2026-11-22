@@ -4,14 +4,14 @@
  "release": "0.2.0",
  "instruments": [
   {
-   "name": "Bass",
-   "wave": 32,
-   "ad": 8,
-   "sr": 96,
-   "pw": 2048,
-   "pwStep": 0,
+   "name": "Grind bass",
+   "wave": 64,
+   "ad": 9,
+   "sr": 64,
+   "pw": 768,
+   "pwStep": 24,
    "pwMin": 32,
-   "pwMax": 224,
+   "pwMax": 144,
    "vibDelay": 0,
    "vibDepth": 0,
    "vibSpeed": 0,
@@ -23,22 +23,22 @@
    "slide": 0
   },
   {
-   "name": "Pluck",
-   "wave": 64,
-   "ad": 6,
-   "sr": 0,
+   "name": "Ring lead",
+   "wave": 20,
+   "ad": 42,
+   "sr": 160,
    "pw": 2048,
-   "pwStep": 40,
-   "pwMin": 64,
-   "pwMax": 176,
-   "vibDelay": 0,
-   "vibDepth": 0,
-   "vibSpeed": 0,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 24,
+   "vibDepth": 5,
+   "vibSpeed": 8,
    "arp": 0,
    "arp2": 0,
    "drumNoise": 0,
    "drumFall": 0,
-   "release": 2,
+   "release": 4,
    "slide": 0
   },
   {
@@ -61,9 +61,9 @@
    "slide": 0
   },
   {
-   "name": "Hat",
+   "name": "Clank",
    "wave": 128,
-   "ad": 1,
+   "ad": 2,
    "sr": 0,
    "pw": 2048,
    "pwStep": 0,
@@ -77,15 +77,15 @@
    "drumNoise": 0,
    "drumFall": 0,
    "release": 2,
-   "slide": 2
+   "slide": 3
   },
   {
-   "name": "Chirp",
+   "name": "Zap",
    "wave": 64,
-   "ad": 5,
+   "ad": 7,
    "sr": 0,
-   "pw": 1024,
-   "pwStep": 60,
+   "pw": 512,
+   "pwStep": 0,
    "pwMin": 32,
    "pwMax": 224,
    "vibDelay": 0,
@@ -96,31 +96,31 @@
    "drumNoise": 0,
    "drumFall": 0,
    "release": 2,
-   "slide": 40
+   "slide": 70
   },
   {
-   "name": "Bell",
-   "wave": 16,
-   "ad": 10,
-   "sr": 0,
-   "pw": 2048,
-   "pwStep": 0,
+   "name": "Alarm",
+   "wave": 64,
+   "ad": 11,
+   "sr": 128,
+   "pw": 1024,
+   "pwStep": 30,
    "pwMin": 32,
-   "pwMax": 224,
-   "vibDelay": 6,
-   "vibDepth": 4,
-   "vibSpeed": 6,
-   "arp": 0,
+   "pwMax": 128,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 6,
    "arp2": 0,
    "drumNoise": 0,
    "drumFall": 0,
-   "release": 2,
+   "release": 4,
    "slide": 0
   },
   {
    "name": "Rumble",
    "wave": 128,
-   "ad": 11,
+   "ad": 12,
    "sr": 0,
    "pw": 2048,
    "pwStep": 0,
@@ -134,7 +134,7 @@
    "drumNoise": 0,
    "drumFall": 0,
    "release": 2,
-   "slide": -12
+   "slide": -20
   },
   {
    "name": "Thump",
@@ -151,7 +151,26 @@
    "arp": 0,
    "arp2": 0,
    "drumNoise": 2,
-   "drumFall": 30,
+   "drumFall": 40,
+   "release": 2,
+   "slide": 0
+  },
+  {
+   "name": "Snare",
+   "wave": 64,
+   "ad": 10,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 3,
+   "drumFall": 24,
    "release": 2,
    "slide": 0
   }
@@ -170,110 +189,164 @@
      {
       "type": "note",
       "pitch": 21,
-      "length": 28
+      "length": 6
      },
      {
       "type": "note",
       "pitch": 21,
-      "length": 28
-     }
-    ]
-   },
-   {
-    "name": "arp minor",
-    "events": [
-     {
-      "type": "inst",
-      "instrument": 1
+      "length": 6
      },
      {
       "type": "note",
       "pitch": 33,
-      "length": 7
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 40,
-      "length": 7
+      "pitch": 21,
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 45,
-      "length": 7
+      "pitch": 21,
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 48,
-      "length": 7
+      "pitch": 21,
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 52,
-      "length": 7
+      "pitch": 33,
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 48,
-      "length": 7
+      "pitch": 21,
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 45,
-      "length": 7
+      "pitch": 21,
+      "length": 6
      },
      {
       "type": "note",
-      "pitch": 40,
-      "length": 7
+      "pitch": 21,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 33,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 21,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 21,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 33,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 21,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 33,
+      "length": 6
      }
     ]
    },
    {
-    "name": "arp major",
+    "name": "drums intro",
     "events": [
      {
       "type": "inst",
-      "instrument": 1
-     },
-     {
-      "type": "note",
-      "pitch": 29,
-      "length": 7
+      "instrument": 2
      },
      {
       "type": "note",
       "pitch": 36,
-      "length": 7
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 3
      },
      {
       "type": "note",
-      "pitch": 41,
-      "length": 7
+      "pitch": 86,
+      "length": 12
      },
      {
-      "type": "note",
-      "pitch": 45,
-      "length": 7
-     },
-     {
-      "type": "note",
-      "pitch": 48,
-      "length": 7
-     },
-     {
-      "type": "note",
-      "pitch": 45,
-      "length": 7
-     },
-     {
-      "type": "note",
-      "pitch": 41,
-      "length": 7
+      "type": "inst",
+      "instrument": 2
      },
      {
       "type": "note",
       "pitch": 36,
-      "length": 7
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 2
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 2
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 6
      }
     ]
    },
@@ -287,7 +360,7 @@
      {
       "type": "note",
       "pitch": 36,
-      "length": 21
+      "length": 12
      },
      {
       "type": "inst",
@@ -296,7 +369,25 @@
      {
       "type": "note",
       "pitch": 86,
-      "length": 7
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 8
+     },
+     {
+      "type": "note",
+      "pitch": 55,
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 6
      },
      {
       "type": "inst",
@@ -305,12 +396,12 @@
      {
       "type": "note",
       "pitch": 36,
-      "length": 7
+      "length": 6
      },
      {
       "type": "note",
       "pitch": 36,
-      "length": 14
+      "length": 12
      },
      {
       "type": "inst",
@@ -319,7 +410,156 @@
      {
       "type": "note",
       "pitch": 86,
-      "length": 7
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 8
+     },
+     {
+      "type": "note",
+      "pitch": 55,
+      "length": 12
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 6
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 6
+     }
+    ]
+   },
+   {
+    "name": "silence",
+    "events": [
+     {
+      "type": "rest",
+      "length": 255
+     },
+     {
+      "type": "rest",
+      "length": 129
+     }
+    ]
+   },
+   {
+    "name": "lead 1",
+    "events": [
+     {
+      "type": "inst",
+      "instrument": 1
+     },
+     {
+      "type": "note",
+      "pitch": 57,
+      "length": 48
+     },
+     {
+      "type": "note",
+      "pitch": 55,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 52,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 53,
+      "length": 72
+     },
+     {
+      "type": "note",
+      "pitch": 52,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 50,
+      "length": 48
+     },
+     {
+      "type": "note",
+      "pitch": 53,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 58,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 55,
+      "length": 96
+     }
+    ]
+   },
+   {
+    "name": "lead 2",
+    "events": [
+     {
+      "type": "inst",
+      "instrument": 1
+     },
+     {
+      "type": "note",
+      "pitch": 57,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 60,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 58,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 57,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 55,
+      "length": 48
+     },
+     {
+      "type": "note",
+      "pitch": 53,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 52,
+      "length": 24
+     },
+     {
+      "type": "note",
+      "pitch": 53,
+      "length": 48
+     },
+     {
+      "type": "note",
+      "pitch": 50,
+      "length": 48
+     },
+     {
+      "type": "note",
+      "pitch": 52,
+      "length": 96
      }
     ]
    }
@@ -332,11 +572,43 @@
     },
     {
      "pattern": 0,
-     "transpose": -4
+     "transpose": 0
     },
     {
      "pattern": 0,
-     "transpose": 3
+     "transpose": 1
+    },
+    {
+     "pattern": 0,
+     "transpose": -2
+    },
+    {
+     "pattern": 0,
+     "transpose": 0
+    },
+    {
+     "pattern": 0,
+     "transpose": 0
+    },
+    {
+     "pattern": 0,
+     "transpose": 1
+    },
+    {
+     "pattern": 0,
+     "transpose": -2
+    },
+    {
+     "pattern": 0,
+     "transpose": 0
+    },
+    {
+     "pattern": 0,
+     "transpose": 0
+    },
+    {
+     "pattern": 0,
+     "transpose": 1
     },
     {
      "pattern": 0,
@@ -348,6 +620,35 @@
    ],
    [
     {
+     "pattern": 3,
+     "transpose": 0
+    },
+    {
+     "pattern": 4,
+     "transpose": 0
+    },
+    {
+     "pattern": 5,
+     "transpose": 0
+    },
+    {
+     "loop": 0
+    }
+   ],
+   [
+    {
+     "pattern": 1,
+     "transpose": 0
+    },
+    {
+     "pattern": 1,
+     "transpose": 0
+    },
+    {
+     "pattern": 1,
+     "transpose": 0
+    },
+    {
      "pattern": 1,
      "transpose": 0
     },
@@ -357,19 +658,30 @@
     },
     {
      "pattern": 2,
-     "transpose": 7
+     "transpose": 0
     },
     {
      "pattern": 2,
-     "transpose": 2
+     "transpose": 0
     },
     {
-     "loop": 0
-    }
-   ],
-   [
+     "pattern": 2,
+     "transpose": 0
+    },
     {
-     "pattern": 3,
+     "pattern": 2,
+     "transpose": 0
+    },
+    {
+     "pattern": 2,
+     "transpose": 0
+    },
+    {
+     "pattern": 2,
+     "transpose": 0
+    },
+    {
+     "pattern": 2,
      "transpose": 0
     },
     {
@@ -390,8 +702,8 @@
     },
     {
      "type": "note",
-     "pitch": 60,
-     "length": 7
+     "pitch": 72,
+     "length": 6
     }
    ]
   },
@@ -406,13 +718,13 @@
     },
     {
      "type": "note",
-     "pitch": 78,
-     "length": 10
+     "pitch": 57,
+     "length": 24
     },
     {
      "type": "note",
-     "pitch": 83,
-     "length": 30
+     "pitch": 51,
+     "length": 36
     }
    ]
   },
@@ -427,7 +739,7 @@
     },
     {
      "type": "note",
-     "pitch": 69,
+     "pitch": 60,
      "length": 50
     }
    ]
@@ -443,7 +755,7 @@
     },
     {
      "type": "note",
-     "pitch": 40,
+     "pitch": 33,
      "length": 30
     }
    ]

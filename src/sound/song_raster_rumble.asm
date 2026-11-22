@@ -12,63 +12,134 @@ raster_rumble_pattern_table
         !word raster_rumble_pat_1
         !word raster_rumble_pat_2
         !word raster_rumble_pat_3
+        !word raster_rumble_pat_4
+        !word raster_rumble_pat_5
 
 raster_rumble_order_v1
         !byte 0, $00                  ; entry 0: pattern 0, transpose +0
-        !byte 0, $FC                  ; entry 1: pattern 0, transpose -4
-        !byte 0, $03                  ; entry 2: pattern 0, transpose +3
+        !byte 0, $00                  ; entry 1: pattern 0, transpose +0
+        !byte 0, $01                  ; entry 2: pattern 0, transpose +1
         !byte 0, $FE                  ; entry 3: pattern 0, transpose -2
+        !byte 0, $00                  ; entry 4: pattern 0, transpose +0
+        !byte 0, $00                  ; entry 5: pattern 0, transpose +0
+        !byte 0, $01                  ; entry 6: pattern 0, transpose +1
+        !byte 0, $FE                  ; entry 7: pattern 0, transpose -2
+        !byte 0, $00                  ; entry 8: pattern 0, transpose +0
+        !byte 0, $00                  ; entry 9: pattern 0, transpose +0
+        !byte 0, $01                  ; entry 10: pattern 0, transpose +1
+        !byte 0, $FE                  ; entry 11: pattern 0, transpose -2
         !byte $FF, 0                    ; loop to entry 0
 
 raster_rumble_order_v2
-        !byte 1, $00                  ; entry 0: pattern 1, transpose +0
-        !byte 2, $00                  ; entry 1: pattern 2, transpose +0
-        !byte 2, $07                  ; entry 2: pattern 2, transpose +7
-        !byte 2, $02                  ; entry 3: pattern 2, transpose +2
+        !byte 3, $00                  ; entry 0: pattern 3, transpose +0
+        !byte 4, $00                  ; entry 1: pattern 4, transpose +0
+        !byte 5, $00                  ; entry 2: pattern 5, transpose +0
         !byte $FF, 0                    ; loop to entry 0
 
 raster_rumble_order_v3
-        !byte 3, $00                  ; entry 0: pattern 3, transpose +0
+        !byte 1, $00                  ; entry 0: pattern 1, transpose +0
+        !byte 1, $00                  ; entry 1: pattern 1, transpose +0
+        !byte 1, $00                  ; entry 2: pattern 1, transpose +0
+        !byte 1, $00                  ; entry 3: pattern 1, transpose +0
+        !byte 2, $00                  ; entry 4: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 5: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 6: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 7: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 8: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 9: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 10: pattern 2, transpose +0
+        !byte 2, $00                  ; entry 11: pattern 2, transpose +0
         !byte $FF, 0                    ; loop to entry 0
 
 raster_rumble_pat_0    ; bass
         !byte $61, 0                    ; instrument 0
-        !byte $15, 28                    ; A-1, 28 ticks
-        !byte $15, 28                    ; A-1, 28 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $21, 6                    ; A-2, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $21, 6                    ; A-2, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $21, 6                    ; A-2, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $21, 6                    ; A-2, 6 ticks
+        !byte $15, 6                    ; A-1, 6 ticks
+        !byte $21, 6                    ; A-2, 6 ticks
         !byte $FF                       ; end of pattern
 
-raster_rumble_pat_1    ; arp minor
-        !byte $61, 1                    ; instrument 1
-        !byte $21, 7                    ; A-2, 7 ticks
-        !byte $28, 7                    ; E-3, 7 ticks
-        !byte $2D, 7                    ; A-3, 7 ticks
-        !byte $30, 7                    ; C-4, 7 ticks
-        !byte $34, 7                    ; E-4, 7 ticks
-        !byte $30, 7                    ; C-4, 7 ticks
-        !byte $2D, 7                    ; A-3, 7 ticks
-        !byte $28, 7                    ; E-3, 7 ticks
-        !byte $FF                       ; end of pattern
-
-raster_rumble_pat_2    ; arp major
-        !byte $61, 1                    ; instrument 1
-        !byte $1D, 7                    ; F-2, 7 ticks
-        !byte $24, 7                    ; C-3, 7 ticks
-        !byte $29, 7                    ; F-3, 7 ticks
-        !byte $2D, 7                    ; A-3, 7 ticks
-        !byte $30, 7                    ; C-4, 7 ticks
-        !byte $2D, 7                    ; A-3, 7 ticks
-        !byte $29, 7                    ; F-3, 7 ticks
-        !byte $24, 7                    ; C-3, 7 ticks
-        !byte $FF                       ; end of pattern
-
-raster_rumble_pat_3    ; drums
+raster_rumble_pat_1    ; drums intro
         !byte $61, 2                    ; instrument 2
-        !byte $24, 21                    ; C-3, 21 ticks
+        !byte $24, 12                    ; C-3, 12 ticks
         !byte $61, 3                    ; instrument 3
-        !byte $56, 7                    ; D-7, 7 ticks
+        !byte $56, 12                    ; D-7, 12 ticks
         !byte $61, 2                    ; instrument 2
-        !byte $24, 7                    ; C-3, 7 ticks
-        !byte $24, 14                    ; C-3, 14 ticks
+        !byte $24, 12                    ; C-3, 12 ticks
         !byte $61, 3                    ; instrument 3
-        !byte $56, 7                    ; D-7, 7 ticks
+        !byte $56, 12                    ; D-7, 12 ticks
+        !byte $61, 2                    ; instrument 2
+        !byte $24, 12                    ; C-3, 12 ticks
+        !byte $61, 3                    ; instrument 3
+        !byte $56, 12                    ; D-7, 12 ticks
+        !byte $61, 2                    ; instrument 2
+        !byte $24, 12                    ; C-3, 12 ticks
+        !byte $61, 3                    ; instrument 3
+        !byte $56, 6                    ; D-7, 6 ticks
+        !byte $56, 6                    ; D-7, 6 ticks
+        !byte $FF                       ; end of pattern
+
+raster_rumble_pat_2    ; drums
+        !byte $61, 2                    ; instrument 2
+        !byte $24, 12                    ; C-3, 12 ticks
+        !byte $61, 3                    ; instrument 3
+        !byte $56, 12                    ; D-7, 12 ticks
+        !byte $61, 8                    ; instrument 8
+        !byte $37, 12                    ; G-4, 12 ticks
+        !byte $61, 3                    ; instrument 3
+        !byte $56, 6                    ; D-7, 6 ticks
+        !byte $61, 2                    ; instrument 2
+        !byte $24, 6                    ; C-3, 6 ticks
+        !byte $24, 12                    ; C-3, 12 ticks
+        !byte $61, 3                    ; instrument 3
+        !byte $56, 12                    ; D-7, 12 ticks
+        !byte $61, 8                    ; instrument 8
+        !byte $37, 12                    ; G-4, 12 ticks
+        !byte $61, 3                    ; instrument 3
+        !byte $56, 6                    ; D-7, 6 ticks
+        !byte $56, 6                    ; D-7, 6 ticks
+        !byte $FF                       ; end of pattern
+
+raster_rumble_pat_3    ; silence
+        !byte $60, 255                    ; rest, 255 ticks
+        !byte $60, 129                    ; rest, 129 ticks
+        !byte $FF                       ; end of pattern
+
+raster_rumble_pat_4    ; lead 1
+        !byte $61, 1                    ; instrument 1
+        !byte $39, 48                    ; A-4, 48 ticks
+        !byte $37, 24                    ; G-4, 24 ticks
+        !byte $34, 24                    ; E-4, 24 ticks
+        !byte $35, 72                    ; F-4, 72 ticks
+        !byte $34, 24                    ; E-4, 24 ticks
+        !byte $32, 48                    ; D-4, 48 ticks
+        !byte $35, 24                    ; F-4, 24 ticks
+        !byte $3A, 24                    ; A#4, 24 ticks
+        !byte $37, 96                    ; G-4, 96 ticks
+        !byte $FF                       ; end of pattern
+
+raster_rumble_pat_5    ; lead 2
+        !byte $61, 1                    ; instrument 1
+        !byte $39, 24                    ; A-4, 24 ticks
+        !byte $3C, 24                    ; C-5, 24 ticks
+        !byte $3A, 24                    ; A#4, 24 ticks
+        !byte $39, 24                    ; A-4, 24 ticks
+        !byte $37, 48                    ; G-4, 48 ticks
+        !byte $35, 24                    ; F-4, 24 ticks
+        !byte $34, 24                    ; E-4, 24 ticks
+        !byte $35, 48                    ; F-4, 48 ticks
+        !byte $32, 48                    ; D-4, 48 ticks
+        !byte $34, 96                    ; E-4, 96 ticks
         !byte $FF                       ; end of pattern
