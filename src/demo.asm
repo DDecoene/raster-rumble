@@ -26,8 +26,8 @@ make_bars                           ; subroutine: fill barcol with the colour of
 
 !zone raster_show
 raster_show                         ; subroutine: once per frame, the colour bars and the fine scroll split (takes about 140 lines)
-        ldy #54                     ; the bars start at line 54
-        jsr wait_line               ; (no later than line 54, or at once if the frame work ended after it)
+                                    ; The work of the screen before this call (stars, music, text) ends after the wrap, below
+                                    ; BAR_TOP: the loop below waits for that line itself.
         inc bar_phase               ; the bars slide: one sine step per frame
         inc bar_phase               ; (two, so they move at a good speed)
         lda bar_phase               ; the sine step of the first line is ...
@@ -101,7 +101,7 @@ scroll_step                         ; subroutine: move the scroller 2 pixels lef
         lsr                         ; shift right twice
         lsr                         ; (lsr alone on A shifts the accumulator)
         sta xlo                     ; colour offset
-        ldx #39                     ; column, counting down
+        ldx #7                      ; the colours repeat every 8 columns: work out those 8 first, counting down
 .colour
         txa                         ; column ...
         clc                         ; clear carry before adding
@@ -110,22 +110,28 @@ scroll_step                         ; subroutine: move the scroller 2 pixels lef
         ora col_base                ; ... in the colours of this screen
         tay                         ; Y = index
         lda letter_cols,y           ; the colour
-        sta COLOR_RAM + SCROLL_ROW * 40,x ; colour the cell
-        dex                         ; previous column
+        sta scr_cols,x              ; the colour of columns x, x + 8, x + 16, x + 24 and x + 32
+        dex                         ; previous one
         bpl .colour                 ; until X goes below 0
+!for c, 0, 7 {                      ; then colour the row: written out, 8 colours of 5 cells each (much quicker than a loop
+        lda scr_cols + c            ; of 40, and the music needs the time). The colour of this group ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c      ; ... in column c ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 8  ; ... c + 8 ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 16 ; ... c + 16 ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 24 ; ... c + 24 ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 32 ; ... and c + 32
+}
         rts                         ; return to the caller
 
 !zone draw_bounce
 draw_bounce                         ; subroutine: the 13 letters of txt_ptr, each on its own place of a sine wave of 4 rows
         lda #$20                    ; A = space
-        ldx #12                     ; the 13 columns, counting down
-.clear
-        sta SCREEN + BOUNCE_ROW * 40 + TITLE_COL,x       ; clear the 4 rows the letters can be on
-        sta SCREEN + (BOUNCE_ROW + 1) * 40 + TITLE_COL,x
-        sta SCREEN + (BOUNCE_ROW + 2) * 40 + TITLE_COL,x
-        sta SCREEN + (BOUNCE_ROW + 3) * 40 + TITLE_COL,x
-        dex                         ; previous column
-        bpl .clear                  ; until X goes below 0
+!for i, 0, 12 {                     ; clear the 4 rows the letters can be on, 13 columns (written out: quicker than a loop)
+        sta SCREEN + BOUNCE_ROW * 40 + TITLE_COL + i
+        sta SCREEN + (BOUNCE_ROW + 1) * 40 + TITLE_COL + i
+        sta SCREEN + (BOUNCE_ROW + 2) * 40 + TITLE_COL + i
+        sta SCREEN + (BOUNCE_ROW + 3) * 40 + TITLE_COL + i
+}
         lda frame_count             ; the colours slide along: every 4 frames one step
         lsr                         ; shift right twice
         lsr

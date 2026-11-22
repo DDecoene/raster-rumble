@@ -106,14 +106,16 @@ draw_title                          ; subroutine: draw the bouncing letters, the
         beq .titlemode              ; 0 = the title
         jmp draw_over               ; game over (draw_over returns to our caller)
 .titlemode
-        ldx #SUB_LEN - 1            ; tagline letter, counting down
-.sub
-        lda sub_text,x              ; one letter of the tagline
-        sta SUB_POS,x               ; put it on the screen
-        lda #COLOR_LGREY            ; light grey
-        sta COLOR_RAM + SUB_POS - SCREEN,x ; colour it
-        dex                         ; previous letter
-        bpl .sub                    ; until X goes below 0
+        ; The tagline and the prompt are written out letter by letter instead of in a loop: the same bytes in the same
+        ; cells, in about half the time (the music needs that time on this screen)
+!for i, 0, SUB_LEN - 1 {            ; every letter of the tagline ...
+        lda sub_text + i            ; ... from the text ...
+        sta SUB_POS + i             ; ... onto the screen
+}
+        lda #COLOR_LGREY            ; light grey ...
+!for i, 0, SUB_LEN - 1 {
+        sta COLOR_RAM + SUB_POS - SCREEN + i ; ... for every letter
+}
         lda frame_count             ; the prompt flashes: bit 4 of the counter flips every 16 frames
         and #%00010000              ; keep only that bit
         beq .on                     ; 0 = white phase
@@ -122,15 +124,13 @@ draw_title                          ; subroutine: draw the bouncing letters, the
 .on
         lda #COLOR_WHITE            ; bright phase
 .setcol
-        sta xlo                     ; remember the colour while X is busy
-        ldx #PROMPT_LEN - 1         ; prompt letter, counting down
-.prompt
-        lda prompt_text,x           ; one letter of the prompt
-        sta PROMPT_POS,x            ; put it on the screen
-        lda xlo                     ; the flash colour
-        sta COLOR_RAM + PROMPT_POS - SCREEN,x ; colour it
-        dex                         ; previous letter
-        bpl .prompt                 ; until X goes below 0
+!for i, 0, PROMPT_LEN - 1 {         ; the flash colour for every letter of the prompt
+        sta COLOR_RAM + PROMPT_POS - SCREEN + i
+}
+!for i, 0, PROMPT_LEN - 1 {         ; every letter of the prompt ...
+        lda prompt_text + i         ; ... from the text ...
+        sta PROMPT_POS + i          ; ... onto the screen
+}
         ldx #VERSION_LEN - 1        ; version letter, counting down
 .version
         lda version_text,x          ; one letter of the version

@@ -338,6 +338,9 @@ no_glitch
         !source "src/chapter.asm"   ; the screen between two chapters of the story
         !source "src/data.asm"      ; tables and text
         !source "src/version.asm"   ; the version number
+        !if * > $2000 {             ; the code and data must end below the sprites at $2000
+            !error "the code and data reach past $2000, where the sprites start"
+        }
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000
 
 ; The sound, after the sprites ($2000) and the character set the game copies to $2800-$2fff at start

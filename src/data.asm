@@ -60,6 +60,7 @@ bar_pal
         !byte 6, 6, 6, 6, 6, 6, 6, 14, 14, 14, 3, 3     ; mostly blue, light blue and cyan only at the top: the letters stay readable
         !fill 20, 0                 ; fire bars (index 32): black
         !byte 2, 2, 2, 2, 2, 2, 2, 8, 8, 8, 10, 10     ; mostly red, orange and light red at the top
+scr_cols   !fill 8, 0               ; the scroller: the colours of columns 0 to 7 in this frame (they repeat every 8 columns)
 letter_cols                         ; the 8 colours that slide along the letters, 8 per screen
         !byte 2, 8, 7, 5, 3, 14, 4, 10 ; title: red orange yellow green cyan lblue purple lred
         !byte 1, 7, 8, 2, 8, 7, 1, 15 ; game over: white yellow orange red ...
