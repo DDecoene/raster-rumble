@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all clean emu serve test stop version d64 dist
+.PHONY: all clean emu serve test stop version d64 dist vice
 
 all: $(OUT)
 
@@ -52,3 +52,7 @@ stop:
 
 clean:
 	rm -rf build
+
+# build and run in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice)
+vice: $(OUT)
+	x64sc -autostart $(OUT)
