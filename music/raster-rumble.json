@@ -1,0 +1,452 @@
+{
+ "format": "websidtracker-project",
+ "version": 2,
+ "release": "0.2.0",
+ "instruments": [
+  {
+   "name": "Bass",
+   "wave": 32,
+   "ad": 8,
+   "sr": 96,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 0,
+   "drumFall": 0,
+   "release": 2,
+   "slide": 0
+  },
+  {
+   "name": "Pluck",
+   "wave": 64,
+   "ad": 6,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 40,
+   "pwMin": 64,
+   "pwMax": 176,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 0,
+   "drumFall": 0,
+   "release": 2,
+   "slide": 0
+  },
+  {
+   "name": "Kick",
+   "wave": 16,
+   "ad": 9,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 1,
+   "drumFall": 200,
+   "release": 2,
+   "slide": 0
+  },
+  {
+   "name": "Hat",
+   "wave": 128,
+   "ad": 1,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 0,
+   "drumFall": 0,
+   "release": 2,
+   "slide": 2
+  },
+  {
+   "name": "Chirp",
+   "wave": 64,
+   "ad": 5,
+   "sr": 0,
+   "pw": 1024,
+   "pwStep": 60,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 0,
+   "drumFall": 0,
+   "release": 2,
+   "slide": 40
+  },
+  {
+   "name": "Bell",
+   "wave": 16,
+   "ad": 10,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 6,
+   "vibDepth": 4,
+   "vibSpeed": 6,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 0,
+   "drumFall": 0,
+   "release": 2,
+   "slide": 0
+  },
+  {
+   "name": "Rumble",
+   "wave": 128,
+   "ad": 11,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 0,
+   "drumFall": 0,
+   "release": 2,
+   "slide": -12
+  },
+  {
+   "name": "Thump",
+   "wave": 16,
+   "ad": 9,
+   "sr": 0,
+   "pw": 2048,
+   "pwStep": 0,
+   "pwMin": 32,
+   "pwMax": 224,
+   "vibDelay": 0,
+   "vibDepth": 0,
+   "vibSpeed": 0,
+   "arp": 0,
+   "arp2": 0,
+   "drumNoise": 2,
+   "drumFall": 30,
+   "release": 2,
+   "slide": 0
+  }
+ ],
+ "song": {
+  "name": "raster rumble",
+  "speed": 1,
+  "patterns": [
+   {
+    "name": "bass",
+    "events": [
+     {
+      "type": "inst",
+      "instrument": 0
+     },
+     {
+      "type": "note",
+      "pitch": 21,
+      "length": 28
+     },
+     {
+      "type": "note",
+      "pitch": 21,
+      "length": 28
+     }
+    ]
+   },
+   {
+    "name": "arp minor",
+    "events": [
+     {
+      "type": "inst",
+      "instrument": 1
+     },
+     {
+      "type": "note",
+      "pitch": 33,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 40,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 45,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 48,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 52,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 48,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 45,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 40,
+      "length": 7
+     }
+    ]
+   },
+   {
+    "name": "arp major",
+    "events": [
+     {
+      "type": "inst",
+      "instrument": 1
+     },
+     {
+      "type": "note",
+      "pitch": 29,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 41,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 45,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 48,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 45,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 41,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 7
+     }
+    ]
+   },
+   {
+    "name": "drums",
+    "events": [
+     {
+      "type": "inst",
+      "instrument": 2
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 21
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 7
+     },
+     {
+      "type": "inst",
+      "instrument": 2
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 7
+     },
+     {
+      "type": "note",
+      "pitch": 36,
+      "length": 14
+     },
+     {
+      "type": "inst",
+      "instrument": 3
+     },
+     {
+      "type": "note",
+      "pitch": 86,
+      "length": 7
+     }
+    ]
+   }
+  ],
+  "orders": [
+   [
+    {
+     "pattern": 0,
+     "transpose": 0
+    },
+    {
+     "pattern": 0,
+     "transpose": -4
+    },
+    {
+     "pattern": 0,
+     "transpose": 3
+    },
+    {
+     "pattern": 0,
+     "transpose": -2
+    },
+    {
+     "loop": 0
+    }
+   ],
+   [
+    {
+     "pattern": 1,
+     "transpose": 0
+    },
+    {
+     "pattern": 2,
+     "transpose": 0
+    },
+    {
+     "pattern": 2,
+     "transpose": 7
+    },
+    {
+     "pattern": 2,
+     "transpose": 2
+    },
+    {
+     "loop": 0
+    }
+   ],
+   [
+    {
+     "pattern": 3,
+     "transpose": 0
+    },
+    {
+     "loop": 0
+    }
+   ]
+  ]
+ },
+ "effects": [
+  {
+   "name": "Dodge",
+   "speed": 1,
+   "voice": 2,
+   "events": [
+    {
+     "type": "inst",
+     "instrument": 4
+    },
+    {
+     "type": "note",
+     "pitch": 60,
+     "length": 7
+    }
+   ]
+  },
+  {
+   "name": "Chapter",
+   "speed": 1,
+   "voice": 2,
+   "events": [
+    {
+     "type": "inst",
+     "instrument": 5
+    },
+    {
+     "type": "note",
+     "pitch": 78,
+     "length": 10
+    },
+    {
+     "type": "note",
+     "pitch": 83,
+     "length": 30
+    }
+   ]
+  },
+  {
+   "name": "Hit",
+   "speed": 1,
+   "voice": 2,
+   "events": [
+    {
+     "type": "inst",
+     "instrument": 6
+    },
+    {
+     "type": "note",
+     "pitch": 69,
+     "length": 50
+    }
+   ]
+  },
+  {
+   "name": "Hit body",
+   "speed": 1,
+   "voice": 0,
+   "events": [
+    {
+     "type": "inst",
+     "instrument": 7
+    },
+    {
+     "type": "note",
+     "pitch": 40,
+     "length": 30
+    }
+   ]
+  }
+ ]
+}

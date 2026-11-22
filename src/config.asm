@@ -8,7 +8,7 @@
 ;   [3] Playfield           the area the ship and enemy may move in
 ;   [4] Game screen         where score, lives and hi score are printed
 ;   [5] Title screen        text positions, waiting times, raster bars, scroller
-;   [6] Sound               music and sound effect timing
+;   [6] Sound               the kick instrument; the rest is in src/sound/
 ;   [7] Stars               the scrolling starfield
 ;   [8] Game effects        explosion, flash, parallax bands
 ;   [9] Zero page           all variables in $02 to $fe, in address order
@@ -81,8 +81,6 @@ CHAP_TEXT_POS = SCREEN + 12 * 40 + 4   ; screen address of the sentence, row 12,
 CHAPTER_LEN   = 32                  ; letters reserved for every sentence (the macro in data.asm pads shorter ones with spaces).
                                     ; Keep it 32: chapter.asm finds a sentence with 5 shifts left (chapter * 32)
 CHAP_FRAMES   = 150                 ; how long the chapter screen shows: 3 seconds
-CHAP_TING_GAP = 10                  ; frames between the two 'ting' notes when the chapter screen opens (0.2 s)
-CHAP_TING_SFX = 22                  ; the drums stay silent this long after a ting, so they do not cut it short
 ; Waiting times
 KEY_FRAMES = 1                      ; frames a key must be down to start the game: a quick tap in the browser emulator lasts only one frame
 RELEASE_FRAMES = 250                ; the title ignores all keys for this many frames (5 seconds) after loading: emulators type their own RUN keys then
@@ -102,11 +100,9 @@ SCROLL_STOP = SCROLL_LINE + 12      ; a line below the scroller row: fine scroll
 ; ============================================================================================================
 ; [6] SOUND
 ; ============================================================================================================
-MUSIC_TICKS = 7                     ; ticks per step of the tune. A tick is half a frame (100 Hz), so a step is 3.5 frames (a 16th note)
-MUSIC_LEN  = 64                     ; steps in the tune before it loops (the arpeggio plays on every 2nd step: 32 notes)
-DRUM_LEN    = 14                    ; ticks per drum table (140 ms, two steps of the tune)
-SFX_BLIP   = 6                      ; the dodge blip is short, so the drums only wait this long
-SFX_FRAMES = 30                     ; after the explosion the drums stay silent this long (0.6 s), so they do not cut the effect short
+; All sound is made by the WebSidTracker player in src/sound/ (see src/sound/README.md). The effects are named by the
+; constants of src/sound/sfx.asm (SFX_DODGE, SFX_CHAPTER, SFX_HIT, SFX_HIT_BODY). The player uses zero page $e0-$ed.
+SND_KICK   = 2                      ; the number of the kick instrument in music/raster-rumble.json: the raster bars pump on it
 
 ; ============================================================================================================
 ; [7] STARS
@@ -134,9 +130,7 @@ score     = $04                     ; three bytes, $04 $05 $06: hundreds, tens, 
 enemy_speed = $07                   ; pixels the enemy falls per frame right now (ENEMY_SPEED up to MAX_SPEED)
 dodge_count = $08                   ; dodged enemies since the last speed-up (0 to DODGES_PER_LEVEL - 1)
 frame_count = $09                   ; counts frames, its lowest bit flips every frame (used to slow the homing)
-; Music
-music_timer = $0a                   ; ticks left until the next step of the tune
-music_step  = $0b                   ; which of the 64 steps plays next
+; $0a and $0b are free (the old tune used them)
 ; Title screen
 key_count   = $0c                   ; title screen: frames in a row that a key has been down
 clean_count = $0d                   ; title screen: frames since the title appeared, counts up to RELEASE_FRAMES, then RELEASE_FRAMES + 1 once a frame with no key was seen
@@ -151,11 +145,8 @@ pal_base    = $17                   ; 0 = blue bar colours, 32 = fire bar colour
 col_base    = $18                   ; 0 = title letter colours, 8 = game over letter colours (index into letter_cols)
 row_ptr     = $19                   ; $19 $1a: screen address where the current bouncing letter goes (column of the letter included)
 crow_ptr    = $1b                   ; $1b $1c: the matching colour RAM address
-; Sound and random numbers
-sfx_timer   = $1d                   ; frames left in which a sound effect owns voice 3 (the drums wait)
+; Random numbers ($1d, $1f and $20 are free: the old sound used them)
 rnd         = $1e                   ; the state of the random number generator (never 0)
-drum_idx    = $1f                   ; tick of the drum that is playing, 1 to DRUM_LEN (0 = no drum playing)
-drum_base   = $20                   ; where the playing drum starts in the drum tables: 0, DRUM_LEN or 2 * DRUM_LEN
 ; Game effects
 dodge_flash = $21                   ; frames left in which the bars flash after a dodge
 band1       = $22                   ; $d016 value (fine scroll) for the top band of the playfield, rows 1 to 6

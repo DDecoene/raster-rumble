@@ -17,7 +17,7 @@ Notes from the brainstorm. Goal: you write the code, Claude explains and reviews
 | Part | Where |
 |---|---|
 | Counting dodges and speeding up every 10 dodges | `count_dodge` in `src/actors.asm`, called from `main.asm` |
-| Dodge sound (SID voice 3) | `main.asm`, in the block that runs when the enemy reaches the bottom |
+| Dodge sound (SID voice 3) | `main.asm`, in the block that runs when the enemy reaches the bottom (since v0.0.5: `score_point` in `src/score.asm` plays the `SFX_DODGE` effect of the WebSidTracker player, see the README, Sound) |
 | Spawning with 9-bit X | `spawn_enemy` in `src/actors.asm` |
 | Collision | `SPR_COLL` ($d01e), only bits 0 and 1 are tested |
 | Explosion particles | `src/effects.asm`, they use sprites 2 to 6 |

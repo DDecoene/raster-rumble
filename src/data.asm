@@ -11,41 +11,6 @@ star_ucol  !fill STARS, 0           ; ... and its colour
 speed_table  !byte 1, 2, 3          ; far, middle and near stars
 colour_table !byte COLOR_DGREY, COLOR_LGREY, COLOR_WHITE
 
-; The tune: an A minor, F, C, G arpeggio, 8 notes per chord, as SID frequency values (PAL clock)
-music_lo
-        !byte $51, $f6, $a2, $67, $ed, $67, $a2, $f6   ; A2 E3 A3 C4 E4 C4 A3 E3
-        !byte $cf, $b3, $9d, $a2, $67, $a2, $9d, $b3   ; F2 C3 F3 A3 C4 A3 F3 C3
-        !byte $b3, $0a, $67, $ed, $13, $ed, $67, $0a   ; C3 G3 C4 E4 G4 E4 C4 G3
-        !byte $85, $c4, $0a, $6d, $89, $6d, $0a, $c4   ; G2 D3 G3 B3 D4 B3 G3 D3
-music_hi
-        !byte $07, $0a, $0e, $11, $15, $11, $0e, $0a   ; A2 E3 A3 C4 E4 C4 A3 E3
-        !byte $05, $08, $0b, $0e, $11, $0e, $0b, $08   ; F2 C3 F3 A3 C4 A3 F3 C3
-        !byte $08, $0d, $11, $15, $1a, $15, $11, $0d   ; C3 G3 C4 E4 G4 E4 C4 G3
-        !byte $06, $09, $0d, $10, $13, $10, $0d, $09   ; G2 D3 G3 B3 D4 B3 G3 D3
-
-bass_lo                             ; the root of each chord, one or two octaves below the arpeggio: A1 F1 C2 G1
-        !byte $a8, $e7, $59, $42
-bass_hi
-        !byte $03, $02, $04, $03
-
-drum_pat                            ; the drum for each of the 16 steps of a bar (a 16th note each): 0 none, 1 kick, 2 snare, 3 hat
-        !byte 1, 0, 0, 0, 0, 0, 3, 0, 1, 0, 1, 0, 0, 0, 3, 0 ; kick on 0, 8 and 10, hat on 6 and 14 (no snare: not used for now)
-drum_ad                             ; attack and decay: the kick has a long tail (the next drum cuts it off), the snare is shorter, the hat very short
-        !byte $09, $05, $01
-drum_start                          ; where each drum begins in the three tables below: DRUM_LEN (14) entries per drum, one per tick
-        !byte 0, DRUM_LEN, 2 * DRUM_LEN
-; The drum tables. Every tick of a drum sets the pitch (high and low byte) and, when drum_ctrl is not 0, the waveform with the gate on.
-; Noise must never be combined with another waveform: that locks the noise generator and the voice goes silent.
-drum_ctrl
-        !byte $81, 0, $11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0     ; kick: noise click for 2 ticks, then a triangle
-        !byte $81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       ; snare: noise all the way
-        !byte $81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       ; hat: noise all the way
-drum_fhi
-        !byte $60, $60, $18, $10, $0a, $07, $05, $05, $04, $04, $04, $04, $04, $04 ; kick: click at 1.4 kHz, then falls 366 Hz to 60 Hz in 5 ticks
-        !byte $28, $24, $20, $1c, $18, $18, $14, $14, $10, $10, $10, $10, $10, $10 ; snare: noise that gets darker
-        !byte $a0, $b0, $b8, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0, $c0 ; hat: high noise, rising a little
-drum_flo
-        !fill 3 * DRUM_LEN, 0       ; low bytes: all 0
 
 score_label
         !scr "score "               ; 6 characters, !scr converts them to C64 screen codes
@@ -95,6 +60,7 @@ bar_pal
         !byte 6, 6, 6, 6, 6, 6, 6, 14, 14, 14, 3, 3     ; mostly blue, light blue and cyan only at the top: the letters stay readable
         !fill 20, 0                 ; fire bars (index 32): black
         !byte 2, 2, 2, 2, 2, 2, 2, 8, 8, 8, 10, 10     ; mostly red, orange and light red at the top
+scr_cols   !fill 8, 0               ; the scroller: the colours of columns 0 to 7 in this frame (they repeat every 8 columns)
 letter_cols                         ; the 8 colours that slide along the letters, 8 per screen
         !byte 2, 8, 7, 5, 3, 14, 4, 10 ; title: red orange yellow green cyan lblue purple lred
         !byte 1, 7, 8, 2, 8, 7, 1, 15 ; game over: white yellow orange red ...

@@ -102,6 +102,37 @@ reset_star_under                    ; subroutine: forget what is under the stars
 update_stars                        ; subroutine: put back what was under every star, move it down, draw it again on top of what is there now
         ldx #STARS - 1              ; star number, counting down
 .loop
+        ; The quick way, for a star that stays in its cell (3 frames out of 4): only its shape changes. The long way
+        ; below would put back what was under it, read it again (the same bytes) and draw the star on it: the cell
+        ; ends up the same as here, the new shape on the background bits of what is under it, in the star's colour.
+        lda star_sub,x              ; pixel row inside the cell (0-7) ...
+        clc                         ; clear carry before adding
+        adc star_spd,x              ; ... moved down by the star's speed
+        cmp #8                      ; past the bottom of the cell?
+        bcs .long                   ; yes: the long way, it moves to another cell
+        sta star_sub,x              ; no: the new pixel row
+        adc #STAR_CHAR              ; its shape: screen code 33 + row (the carry is clear here)
+        sta star_bg                 ; (star_bg is scratch here)
+        lda star_ucode,x            ; what is under the star ...
+        and #%11000000              ; ... gives the background colour bits (extended colour mode)
+        ora star_bg                 ; plus the shape
+        ldy star_lo,x               ; the cell: the screen address in Y (low byte) and the pointer (high byte)
+        sty star_ptr
+        sty star_cptr               ; colour RAM: the same low byte ...
+        ldy star_hi,x
+        sty star_ptr + 1
+        ldy #0                      ; (pointer),y with Y = 0 means "the byte the pointer points at"
+        sta (star_ptr),y            ; draw the star
+        lda star_ptr + 1            ; ... and the high byte + $d4 ($04xx + $d400 = $d8xx)
+        clc
+        adc #$d4
+        sta star_cptr + 1
+        lda star_col,x              ; this star's colour
+        sta (star_cptr),y           ; colour the star
+        dex                         ; next star
+        bpl .loop                   ; until X goes below 0
+        rts                         ; return to the caller
+.long
         lda star_lo,x               ; screen address of this star, low byte
         sta star_ptr                ; into the zero page pointer
         lda star_hi,x               ; high byte
