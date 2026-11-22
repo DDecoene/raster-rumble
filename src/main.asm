@@ -7,7 +7,8 @@
 ;   src/actors.asm     ship and enemy movement (9-bit X), spawning, homing, difficulty
 ;   src/score.asm      score and high score
 ;   src/starfield.asm  RAM character set, scrolling stars, random_column
-;   src/music.asm      the tune on SID voice 2, and the sound effects on voice 3 (blip, ting, explosion)
+;   src/sound.asm      the game's side of the sound: the player once per frame, the raster bars pump on the kick
+;   src/sound/         the WebSidTracker player, the instruments, the effects and the tune (MIT, see src/sound/README.md)
 ;   src/title.asm      the title and game over screens and the any-key check
 ;   src/demo.asm       the demo effects of those screens: raster bars, bouncing letters, scroller
 ;   src/effects.asm    the game's demo effects: explosion burst, shake, parallax bands
@@ -89,35 +90,10 @@ start
 
         lda #$a7                    ; any value but 0: the random number generator starts here
         sta rnd
-        lda #0                      ; voice 3 is the drum voice (see music.asm), no sound yet
-        sta drum_idx                ; no drum is playing
-        sta SID_FREQ3L              ; frequency low byte (the drums only set the high byte)
-
-        lda #%00011111              ; volume 15 (max), bit 4 = low-pass filter, bit 7 = 0: voice 3 is not muted
-        sta SID_VOLUME              ; switch the sound on
-        lda #$a2                    ; resonance 10, and voice 2 (bit 1) goes through the filter, the bass and the effects do not
-        sta SID_RES                 ; filter setup
-        lda #$00                    ; no sound effect is playing
-        sta sfx_timer
-        lda #$09                    ; attack 0 (instant), decay 9 (about 0.75 seconds)
-        sta SID_AD1                 ; voice 1 envelope part 1
-        lda #$00                    ; sustain 0 (silent once decayed), release 0
-        sta SID_SR1                 ; voice 1 envelope part 2
-        lda #$08                    ; a fairly high pitch, for a crunchy noise
-        sta SID_FREQ1H              ; voice 1 frequency high byte (low byte stays 0)
-
-        lda #$06                    ; voice 2 plays the music: attack 0, decay 6 (a short pluck)
-        sta SID_AD2                 ; voice 2 envelope part 1
-        lda #$00                    ; sustain 0, release 0
-        sta SID_SR2                 ; voice 2 envelope part 2
-        lda #$00                    ; pulse width $0800 = a square wave
-        sta SID_PW2L                ; pulse width low byte
-        lda #$08                    ; high nibble 8
-        sta SID_PW2H                ; pulse width high byte
-        lda #1                      ; play the first step on the next tick
-        sta music_timer             ; counts down to 0
+        lda #<song_raster_rumble    ; the tune (src/sound/song_raster_rumble.asm, made in WebSidTracker) ...
+        ldx #>song_raster_rumble    ; ... its address in A (low byte) and X (high byte)
+        jsr music_init              ; clears the SID, sets the volume to 15 and starts the tune; update_music plays it
         lda #0                      ; A = 0
-        sta music_step              ; start the tune at note 0
         sta hit_timer               ; border is not flashing yet
 
         jsr setup_charset           ; our own character set with 8 star shapes
@@ -177,11 +153,13 @@ start
         lda SPR_COLL               ; read the collision register once to clear leftovers
 
 frame                               ; the game loop, runs once per screen refresh (50 Hz on PAL)
-        lda #$fb                    ; the raster line we wait for (near the bottom of the screen)
--       cmp VIC_RASTER              ; is the beam on that line yet?
-        bne -                       ; no, keep checking
--       cmp VIC_RASTER              ; yes, now wait until the beam has left that line
-        beq -                       ; still on it, keep waiting (so we only run once per frame)
+-       lda VIC_CTRL1               ; wait for raster line $fb (near the bottom of the screen) or later: bit 7 of $d011 is
+        bmi +                       ; bit 8 of the line, set = line 256 or more, past $fb already
+        lda VIC_RASTER              ; the line, bits 0-7
+        cmp #$fb
+        bcc -                       ; below $fb: keep waiting. "Or later": when the music at the end of game_bars runs
++                                   ; past $fb the frame goes on at once instead of waiting a whole frame (once per frame
+                                    ; is safe: game_bars always waits for line BAND3_LINE first)
 
         lda #%11001000              ; no fine scroll for the score row and the bottom (game_bars sets the bands)
         sta VIC_CTRL2
@@ -204,7 +182,6 @@ frame                               ; the game loop, runs once per screen refres
         sta SPRITE7_PTR             ; the Glitch shape for this frame
 
         jsr update_stars            ; scroll the starfield down
-        jsr update_music            ; the synth sweeps (once per frame; the tune itself ticks inside game_bars, twice a frame)
 
         jsr cia_inputs              ; the ports must be inputs every time (an emulator was seen to change port B)
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
@@ -308,7 +285,12 @@ ship_hit
         sta VIC_BORDER              ; flash the border
         lda #HIT_FRAMES             ; how long to flash
         sta hit_timer               ; start the flash timer
-        jsr sfx_explosion           ; the long noise rumble on voice 3
+        lda #SFX_HIT                ; the hit is two sound effects at once: a noise rumble on voice 3 ...
+        ldx #2
+        jsr sfx_play
+        lda #SFX_HIT_BODY           ; ... and a low thump on voice 1 (the bass), so the tune on voice 2 goes on
+        ldx #0
+        jsr sfx_play
         jsr start_explosion         ; a burst of sprites from the ship, shake and fire bars
         dec lives                   ; a hit costs a life (the score and the speed stay)
         jsr draw_lives              ; show it
@@ -342,18 +324,31 @@ no_glitch
         jsr update_particles        ; move the burst of an explosion
         jsr update_bands            ; the shake and the scroll of the three bands, from the ship position
         jsr plasma_prep             ; the phases and the horizontal wave of the plasma for this frame
-        jsr game_bars               ; the music ticks, the scroll bands and 4 rows of the plasma (this waits for the next frame)
+        jsr game_bars               ; the scroll bands, 4 rows of the plasma and the music (this waits for the right lines)
         jmp frame                   ; back to the top for the next frame
 
 ; The rest of the program. The order here is the order in memory: code first, then data, then sprites.
         !source "src/actors.asm"    ; ship and enemy movement, spawning, difficulty
         !source "src/score.asm"     ; score and high score
         !source "src/starfield.asm" ; character set, stars and the random column helper
-        !source "src/music.asm"     ; the tune
+        !source "src/sound.asm"     ; the player once per frame, the kick pump
         !source "src/title.asm"     ; the title screen and the any-key check
         !source "src/demo.asm"      ; raster bars, bouncing letters, scroller
         !source "src/effects.asm"   ; explosion burst, shake, parallax bands of the game
         !source "src/chapter.asm"   ; the screen between two chapters of the story
         !source "src/data.asm"      ; tables and text
         !source "src/version.asm"   ; the version number
+        !if * > $2000 {             ; the code and data must end below the sprites at $2000
+            !error "the code and data reach past $2000, where the sprites start"
+        }
         !source "src/sprites.asm"   ; the ship and enemy shapes, they sit at $2000
+
+; The sound, after the sprites ($2000) and the character set the game copies to $2800-$2fff at start
+        * = $3000
+        !source "src/sound/music.asm"               ; the WebSidTracker player (MIT, see src/sound/README.md)
+        !source "src/sound/instruments.asm"         ; its instruments ...
+        !source "src/sound/sfx.asm"                 ; ... the sound effects ...
+        !source "src/sound/song_raster_rumble.asm"  ; ... and the tune, all made in the tracker
+        !if * > hi_score {                          ; it must end below the RAM tables at $c000
+            !error "the sound files reach past $c000"
+        }

@@ -63,18 +63,13 @@ chapter_screen                      ; subroutine: show the time and the sentence
         jsr raster_show             ; the colour bars (this also waits for the next frame)
         inc frame_count             ; one more frame has passed
         jsr update_stars            ; the stars keep scrolling behind the text
-        jsr update_music            ; and the synth keeps sweeping (the tune itself ticks inside raster_show)
+        jsr update_music            ; and the music keeps playing
 
-        lda chap_timer              ; the 'ting ting': a note on the first frame ...
-        bne .second
-        ldx #$60                    ; (SID frequency high byte: about 1.5 kHz)
-        jsr sfx_ting
-        jmp .tinged
-.second
-        cmp #CHAP_TING_GAP          ; ... and a higher one CHAP_TING_GAP frames later
+        lda chap_timer              ; on the first frame: the 'ting ting' (two bell notes, one sound effect)
         bne .tinged
-        ldx #$80                    ; a fourth higher (4/3 of $60): about 2 kHz
-        jsr sfx_ting
+        lda #SFX_CHAPTER
+        ldx #2                      ; on voice 3, the drums
+        jsr sfx_play
 .tinged
 
         lda chap_timer              ; the sentence types itself: one more letter every 2 frames ...

@@ -154,6 +154,9 @@ plasma_init                         ; subroutine: colour all 24 rows of the play
         bne .rows
         lda #%01011011              ; extended colour mode on (bit 6 of $d011), vertical scroll 3
         sta VIC_CTRL1
+        lda #$fb                    ; the game loop comes next: start it on a fresh frame. Wait for exactly line $fb (the
+-       cmp VIC_RASTER              ; game loop itself also takes "later", for a frame where the music ran long, but after
+        bne -                       ; this long job the beam can be anywhere)
         rts                         ; return to the caller
 
 !zone start_explosion

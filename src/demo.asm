@@ -26,9 +26,8 @@ make_bars                           ; subroutine: fill barcol with the colour of
 
 !zone raster_show
 raster_show                         ; subroutine: once per frame, the colour bars and the fine scroll split (takes about 140 lines)
-        ldy #54                     ; the tune runs twice per frame: one tick here, before the bars ...
-        jsr wait_line               ; (no later than line 54, or at once if the frame work ended after it)
-        jsr music_tick
+                                    ; The work of the screen before this call (stars, music, text) ends after the wrap, below
+                                    ; BAR_TOP: the loop below waits for that line itself.
         inc bar_phase               ; the bars slide: one sine step per frame
         inc bar_phase               ; (two, so they move at a good speed)
         lda bar_phase               ; the sine step of the first line is ...
@@ -54,7 +53,6 @@ raster_show                         ; subroutine: once per frame, the colour bar
         lda #0                      ; yes: black again for the rest of the frame
         sta VIC_BG                  ; background
         sta VIC_BORDER              ; border
-        jsr music_tick              ; ... and one after them, about half a frame later
         ldy #SCROLL_LINE            ; just above the scroller row
         jsr wait_line               ; wait for it
         lda scr_fine                ; the fine scroll, 0 to 7 pixels
@@ -103,7 +101,7 @@ scroll_step                         ; subroutine: move the scroller 2 pixels lef
         lsr                         ; shift right twice
         lsr                         ; (lsr alone on A shifts the accumulator)
         sta xlo                     ; colour offset
-        ldx #39                     ; column, counting down
+        ldx #7                      ; the colours repeat every 8 columns: work out those 8 first, counting down
 .colour
         txa                         ; column ...
         clc                         ; clear carry before adding
@@ -112,22 +110,28 @@ scroll_step                         ; subroutine: move the scroller 2 pixels lef
         ora col_base                ; ... in the colours of this screen
         tay                         ; Y = index
         lda letter_cols,y           ; the colour
-        sta COLOR_RAM + SCROLL_ROW * 40,x ; colour the cell
-        dex                         ; previous column
+        sta scr_cols,x              ; the colour of columns x, x + 8, x + 16, x + 24 and x + 32
+        dex                         ; previous one
         bpl .colour                 ; until X goes below 0
+!for c, 0, 7 {                      ; then colour the row: written out, 8 colours of 5 cells each (much quicker than a loop
+        lda scr_cols + c            ; of 40, and the music needs the time). The colour of this group ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c      ; ... in column c ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 8  ; ... c + 8 ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 16 ; ... c + 16 ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 24 ; ... c + 24 ...
+        sta COLOR_RAM + SCROLL_ROW * 40 + c + 32 ; ... and c + 32
+}
         rts                         ; return to the caller
 
 !zone draw_bounce
 draw_bounce                         ; subroutine: the 13 letters of txt_ptr, each on its own place of a sine wave of 4 rows
         lda #$20                    ; A = space
-        ldx #12                     ; the 13 columns, counting down
-.clear
-        sta SCREEN + BOUNCE_ROW * 40 + TITLE_COL,x       ; clear the 4 rows the letters can be on
-        sta SCREEN + (BOUNCE_ROW + 1) * 40 + TITLE_COL,x
-        sta SCREEN + (BOUNCE_ROW + 2) * 40 + TITLE_COL,x
-        sta SCREEN + (BOUNCE_ROW + 3) * 40 + TITLE_COL,x
-        dex                         ; previous column
-        bpl .clear                  ; until X goes below 0
+!for i, 0, 12 {                     ; clear the 4 rows the letters can be on, 13 columns (written out: quicker than a loop)
+        sta SCREEN + BOUNCE_ROW * 40 + TITLE_COL + i
+        sta SCREEN + (BOUNCE_ROW + 1) * 40 + TITLE_COL + i
+        sta SCREEN + (BOUNCE_ROW + 2) * 40 + TITLE_COL + i
+        sta SCREEN + (BOUNCE_ROW + 3) * 40 + TITLE_COL + i
+}
         lda frame_count             ; the colours slide along: every 4 frames one step
         lsr                         ; shift right twice
         lsr
@@ -177,13 +181,11 @@ draw_bounce                         ; subroutine: the 13 letters of txt_ptr, eac
 
 
 !zone game_bars
-game_bars                           ; subroutine: once per frame, in the game: a tick of the music, the three scroll bands, and in between
-        lda #54                     ; rows of the plasma (4 a frame, the whole plasma every 6 frames) (while the beam is drawing the screen; the colours change under it)
--       cmp VIC_RASTER              ; wait for line 54 ...
-        bne -                       ; (equal, not "at least": the work before this ends below line 54 or after the wrap)
-        jsr music_tick
+game_bars                           ; subroutine: once per frame, in the game: the three scroll bands, and in between
+                                    ; rows of the plasma (4 a frame, the whole plasma every 6 frames) (while the beam is drawing
+                                    ; the screen; the colours change under it), then the music in the free lines below the plasma
         ldy #BAND1_LINE             ; row 1 (below the score) starts: the first scroll band
-        jsr wait_line
+        jsr wait_line               ; (the frame work before this ends after the wrap, below this line)
         lda band1
         sta VIC_CTRL2
         jsr plasma_step             ; 1 row of the plasma (about 28 raster lines)
@@ -197,7 +199,5 @@ game_bars                           ; subroutine: once per frame, in the game: a
         jsr wait_line
         lda band3
         sta VIC_CTRL2
-        jsr plasma_step             ; 1 row
-        ldy #210                    ; half a frame after the first tick
-        jsr wait_line
-        jmp music_tick              ; the second tick of the frame (it returns to our caller)
+        jsr plasma_step             ; 1 row (it ends near line 200)
+        jmp update_music            ; the music and the effects, in the free lines down to the bottom (it returns to our caller)

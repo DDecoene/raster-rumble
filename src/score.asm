@@ -106,7 +106,9 @@ draw_lives                          ; subroutine: print the lives digit
         rts                         ; return to the caller
 
 !zone score_point
-score_point                         ; subroutine: every scored point goes through here: score + 1, the high score check and the blip sound
+score_point                         ; subroutine: every scored point goes through here: score + 1, the high score check and the dodge sound
         jsr add_score               ; +1 point
         jsr update_hiscore          ; if that beat the high score, it becomes the new one
-        jmp sfx_blip                ; play the blip (sfx_blip returns to our caller)
+        lda #SFX_DODGE              ; the dodge sound effect ...
+        ldx #2                      ; ... on voice 3, the drums
+        jmp sfx_play                ; (sfx_play returns to our caller)

@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all clean emu serve test stop version d64 dist
+.PHONY: all clean emu serve test stop version d64 dist vice
 
 all: $(OUT)
 
@@ -52,3 +52,8 @@ stop:
 
 clean:
 	rm -rf build
+
+# build and run in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice).
+# tools/vice-joystick.rc puts joystick port 2 on the arrow keys and Space (VICE's default is the numeric keypad).
+vice: $(OUT)
+	x64sc -addconfig tools/vice-joystick.rc -autostart $(OUT)
