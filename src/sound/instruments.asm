@@ -3,79 +3,97 @@
 ; One table per field, indexed by the instrument number (see docs/design-player-format-and-timing.md, section 5).
 ;
 ; Instruments in this file:
-;   $00  Bass
-;   $01  Pluck
+;   $00  Grind bass
+;   $01  Ring lead
 ;   $02  Kick
-;   $03  Hat
-;   $04  Chirp
-;   $05  Bell
+;   $03  Clank
+;   $04  Zap
+;   $05  Alarm
 ;   $06  Rumble
 ;   $07  Thump
+;   $08  Snare
 
 ; control register without the gate bit (waveform in bits 7-4)
 inst_wave
-        !byte $20, $40, $10, $80, $40, $10, $80, $10    ; 0-7
+        !byte $40, $14, $10, $80, $40, $40, $80, $10    ; 0-7
+        !byte $40    ; 8-8
 
 ; attack / decay
 inst_ad
-        !byte $08, $06, $09, $01, $05, $0A, $0B, $09    ; 0-7
+        !byte $09, $2A, $09, $02, $07, $0B, $0C, $09    ; 0-7
+        !byte $0A    ; 8-8
 
 ; sustain / release
 inst_sr
-        !byte $60, $00, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $40, $A0, $00, $00, $00, $80, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; start pulse width, low byte
 inst_pw_lo
         !byte $00, $00, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; start pulse width, high nibble
 inst_pw_hi
-        !byte $08, $08, $08, $08, $04, $08, $08, $08    ; 0-7
+        !byte $03, $08, $08, $08, $02, $04, $08, $08    ; 0-7
+        !byte $08    ; 8-8
 
 ; pulse sweep per frame (signed)
 inst_pw_step
-        !byte $00, $28, $00, $00, $3C, $00, $00, $00    ; 0-7
+        !byte $18, $00, $00, $00, $00, $1E, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; sweep lower limit, pulse width / 16
 inst_pw_min
-        !byte $20, $40, $20, $20, $20, $20, $20, $20    ; 0-7
+        !byte $20, $20, $20, $20, $20, $20, $20, $20    ; 0-7
+        !byte $20    ; 8-8
 
 ; sweep upper limit, pulse width / 16
 inst_pw_max
-        !byte $E0, $B0, $E0, $E0, $E0, $E0, $E0, $E0    ; 0-7
+        !byte $90, $E0, $E0, $E0, $E0, $80, $E0, $E0    ; 0-7
+        !byte $E0    ; 8-8
 
 ; frames before the vibrato starts
 inst_vib_delay
-        !byte $00, $00, $00, $00, $00, $06, $00, $00    ; 0-7
+        !byte $00, $18, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; vibrato width, 1/16 of the distance to the next semitone
 inst_vib_depth
-        !byte $00, $00, $00, $00, $00, $04, $00, $00    ; 0-7
+        !byte $00, $05, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; frames per half vibrato period
 inst_vib_speed
-        !byte $00, $00, $00, $00, $00, $06, $00, $00    ; 0-7
+        !byte $00, $08, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; arpeggio: first offset in semitones (signed)
 inst_arp
-        !byte $00, $00, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $00, $00, $00, $00, $00, $06, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; drum: frames of noise at the start (0 = not a drum)
 inst_drum_noise
         !byte $00, $00, $01, $00, $00, $00, $00, $02    ; 0-7
+        !byte $03    ; 8-8
 
 ; drum: frequency units the tone falls per frame
 inst_drum_fall
-        !byte $00, $00, $C8, $00, $00, $00, $00, $1E    ; 0-7
+        !byte $00, $00, $C8, $00, $00, $00, $00, $28    ; 0-7
+        !byte $18    ; 8-8
 
 ; frames at the end of a note kept for the clean restart
 inst_release
-        !byte $02, $02, $02, $02, $02, $02, $02, $02    ; 0-7
+        !byte $02, $04, $02, $02, $02, $04, $02, $02    ; 0-7
+        !byte $02    ; 8-8
 
 ; arpeggio: second offset in semitones (signed, 0 = a two-note arpeggio)
 inst_arp2
         !byte $00, $00, $00, $00, $00, $00, $00, $00    ; 0-7
+        !byte $00    ; 8-8
 
 ; pitch slide: frequency change per frame in units of 8 (signed, 0 = no slide)
 inst_slide
-        !byte $00, $00, $00, $02, $28, $00, $F4, $00    ; 0-7
+        !byte $00, $00, $00, $03, $46, $00, $EC, $00    ; 0-7
+        !byte $00    ; 8-8
