@@ -153,11 +153,13 @@ start
         lda SPR_COLL               ; read the collision register once to clear leftovers
 
 frame                               ; the game loop, runs once per screen refresh (50 Hz on PAL)
-        lda #$fb                    ; the raster line we wait for (near the bottom of the screen)
--       cmp VIC_RASTER              ; is the beam on that line yet?
-        bne -                       ; no, keep checking
--       cmp VIC_RASTER              ; yes, now wait until the beam has left that line
-        beq -                       ; still on it, keep waiting (so we only run once per frame)
+-       lda VIC_CTRL1               ; wait for raster line $fb (near the bottom of the screen) or later: bit 7 of $d011 is
+        bmi +                       ; bit 8 of the line, set = line 256 or more, past $fb already
+        lda VIC_RASTER              ; the line, bits 0-7
+        cmp #$fb
+        bcc -                       ; below $fb: keep waiting. "Or later": when the music at the end of game_bars runs
++                                   ; past $fb the frame goes on at once instead of waiting a whole frame (once per frame
+                                    ; is safe: game_bars always waits for line BAND3_LINE first)
 
         lda #%11001000              ; no fine scroll for the score row and the bottom (game_bars sets the bands)
         sta VIC_CTRL2
@@ -180,7 +182,6 @@ frame                               ; the game loop, runs once per screen refres
         sta SPRITE7_PTR             ; the Glitch shape for this frame
 
         jsr update_stars            ; scroll the starfield down
-        jsr update_music            ; the music and the sound effects, once per frame (first thing, so the frame ends in time)
 
         jsr cia_inputs              ; the ports must be inputs every time (an emulator was seen to change port B)
         lda CIA1_PORTA              ; read the joystick, a 0 bit means the direction is pressed
@@ -323,7 +324,7 @@ no_glitch
         jsr update_particles        ; move the burst of an explosion
         jsr update_bands            ; the shake and the scroll of the three bands, from the ship position
         jsr plasma_prep             ; the phases and the horizontal wave of the plasma for this frame
-        jsr game_bars               ; the scroll bands and 4 rows of the plasma (this waits for the right lines)
+        jsr game_bars               ; the scroll bands, 4 rows of the plasma and the music (this waits for the right lines)
         jmp frame                   ; back to the top for the next frame
 
 ; The rest of the program. The order here is the order in memory: code first, then data, then sprites.

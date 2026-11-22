@@ -176,11 +176,10 @@ draw_bounce                         ; subroutine: the 13 letters of txt_ptr, eac
 
 !zone game_bars
 game_bars                           ; subroutine: once per frame, in the game: the three scroll bands, and in between
-        lda #54                     ; rows of the plasma (4 a frame, the whole plasma every 6 frames) (while the beam is drawing the screen; the colours change under it)
--       cmp VIC_RASTER              ; wait for line 54 ...
-        bne -                       ; (equal, not "at least": the work before this ends below line 54 or after the wrap)
+                                    ; rows of the plasma (4 a frame, the whole plasma every 6 frames) (while the beam is drawing
+                                    ; the screen; the colours change under it), then the music in the free lines below the plasma
         ldy #BAND1_LINE             ; row 1 (below the score) starts: the first scroll band
-        jsr wait_line
+        jsr wait_line               ; (the frame work before this ends after the wrap, below this line)
         lda band1
         sta VIC_CTRL2
         jsr plasma_step             ; 1 row of the plasma (about 28 raster lines)
@@ -194,5 +193,5 @@ game_bars                           ; subroutine: once per frame, in the game: t
         jsr wait_line
         lda band3
         sta VIC_CTRL2
-        jsr plasma_step             ; 1 row
-        rts                         ; return to the caller
+        jsr plasma_step             ; 1 row (it ends near line 200)
+        jmp update_music            ; the music and the effects, in the free lines down to the bottom (it returns to our caller)
