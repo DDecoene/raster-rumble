@@ -53,6 +53,7 @@ stop:
 clean:
 	rm -rf build
 
-# build and run in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice)
+# build and run in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice).
+# tools/vice-joystick.rc puts joystick port 2 on the arrow keys and Space (VICE's default is the numeric keypad).
 vice: $(OUT)
-	x64sc -autostart $(OUT)
+	x64sc -addconfig tools/vice-joystick.rc -autostart $(OUT)

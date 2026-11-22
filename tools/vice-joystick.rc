@@ -1,0 +1,10 @@
+; VICE settings for make vice: joystick port 2 on the arrow keys, fire on Space (keyset 1).
+; VICE's own default is the numeric keypad, which a laptop does not have. The numbers are GTK key codes.
+[C64SC]
+KeySetEnable=1
+JoyDevice2=2
+KeySet1North=65362
+KeySet1South=65364
+KeySet1West=65361
+KeySet1East=65363
+KeySet1Fire=32
