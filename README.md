@@ -76,7 +76,7 @@ The latest build is always on the [Releases page](https://github.com/DDecoene/ra
 
 How it works:
 
-- The version lives in `src/version.asm` (`!scr "v0.0.4"`) and is shown on the title screen. `make version` prints it.
+- The version lives in `src/version.asm` (`!scr "v0.0.5"`) and is shown on the title screen. `make version` prints it.
 - `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or that does not build.
 - When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
 - So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
