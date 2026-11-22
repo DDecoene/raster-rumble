@@ -6,6 +6,8 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 **[▶ Play it now in your browser](https://vc64web.github.io/#openROMS=true#port2=true#https://raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg)** (nothing to install: arrow keys steer, Space is fire, any key starts. The first start takes a few seconds)
 
+**Music and sound effects made with [WebSidTracker](https://github.com/DDecoene/WebSidTracker)**, a SID tracker that runs in the browser, with a small 6502 player for games (by the same author, made for this game). The tune and the effects are one tracker project, [`music/raster-rumble.json`](music/raster-rumble.json): load it in the [online tracker](https://ddecoene.github.io/WebSidTracker/tracker.html) (Open) to hear it, see it and change it. How the game uses it: [Sound](#sound).
+
 ![Gameplay: the Glitch and enemies that drift sideways](docs/screenshots/gameplay.gif)
 
 | Title | Chapter screen |
@@ -184,7 +186,7 @@ All sound comes from the player of [WebSidTracker](https://github.com/DDecoene/W
 - **The tune** is dark and industrial, made for the 6581 SID: 125 BPM (speed 1, 6 frames a sixteenth, 96 a bar), 12 bars that loop (about 23 seconds). Voice 1 a gritty pulse bass in sixteenths that jumps an octave (A, A, B flat, G); voice 2 a cold lead, a triangle ring-modulated by the bass (so its metal colour changes with every bass note), with a late vibrato, silent for the first 4 bars; voice 3 the kick (four on the floor), a metal hat and, after the intro, a snare.
 - **The player** starts the tune once (`music_init` in `main.asm`) and runs once per frame through `update_music` (`src/sound.asm`): in the game at the end of `game_bars`, below the plasma; on the title, game over and chapter screens after the raster bars. After `music_play`, `update_music` looks at the player's state of voice 3 (`st_age`, `st_instr`): when a note of the kick (`SND_KICK`, instrument 2 of the project) starts, the raster bars are pushed on, so they pump with the beat.
 - **Sound effects** borrow a voice; the music of that voice keeps time and comes back at its next note. A dodge plays `SFX_DODGE` on voice 3 (`score_point` in `score.asm`), a new chapter `SFX_CHAPTER` on voice 3 (`chapter_screen`), a hit `SFX_HIT` on voice 3 and `SFX_HIT_BODY` on voice 1 at the same time (the hit code in `main.asm`), so the lead on voice 2 always goes on.
-- **Time.** `music_play` takes about 2000 to 6000 of the 19,656 cycles of a frame. To make room on the title screens, `update_stars` has a quick path for a star that stays in its cell, and the scroller colours, the tagline, the prompt and the clearing of the bouncing letters are written out instead of looped. Measured in VICE: the title work ends at most 148 of the 156 free lines after the bars; in the game the first scroll band was never more than one line late in 3244 frames.
+- **Time.** `music_play` takes about 2000 to 6000 of the 19,656 cycles of a frame. To make room on the title screens, `update_stars` has a quick path for a star that stays in its cell, and the scroller colours, the tagline, the prompt and the clearing of the bouncing letters are written out instead of looped. Measured in VICE (6581): with the current tune the title work ends at most 153 of the 156 free lines after the bars (about 12,000 frames); in the game the first scroll band was never more than one line late in 3244 frames (with the first tune), and the current tune is not later than that one.
 
 ### Joystick and the keyboard
 
