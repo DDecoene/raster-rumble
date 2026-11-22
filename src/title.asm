@@ -57,7 +57,7 @@ game_over                           ; subroutine: show "game over" until a key o
         jsr raster_show             ; the colour bars and the scroller split: this also waits for the next frame
         inc frame_count             ; one more frame has passed (the stars and the colours use it)
         jsr update_stars            ; the stars keep scrolling behind the title
-        jsr update_music            ; and the synth keeps sweeping (the tune itself ticks inside raster_show, twice a frame)
+        jsr update_music            ; and the music keeps playing (once per frame, after the bars)
         jsr draw_title              ; draw the text on top of any star that crossed it
         jsr scroll_step             ; move the scroller 2 pixels
         lda clean_count             ; the first RELEASE_FRAMES frames only count time, whatever is pressed: ...

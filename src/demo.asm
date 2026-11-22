@@ -26,9 +26,8 @@ make_bars                           ; subroutine: fill barcol with the colour of
 
 !zone raster_show
 raster_show                         ; subroutine: once per frame, the colour bars and the fine scroll split (takes about 140 lines)
-        ldy #54                     ; the tune runs twice per frame: one tick here, before the bars ...
+        ldy #54                     ; the bars start at line 54
         jsr wait_line               ; (no later than line 54, or at once if the frame work ended after it)
-        jsr music_tick
         inc bar_phase               ; the bars slide: one sine step per frame
         inc bar_phase               ; (two, so they move at a good speed)
         lda bar_phase               ; the sine step of the first line is ...
@@ -54,7 +53,6 @@ raster_show                         ; subroutine: once per frame, the colour bar
         lda #0                      ; yes: black again for the rest of the frame
         sta VIC_BG                  ; background
         sta VIC_BORDER              ; border
-        jsr music_tick              ; ... and one after them, about half a frame later
         ldy #SCROLL_LINE            ; just above the scroller row
         jsr wait_line               ; wait for it
         lda scr_fine                ; the fine scroll, 0 to 7 pixels
@@ -177,11 +175,10 @@ draw_bounce                         ; subroutine: the 13 letters of txt_ptr, eac
 
 
 !zone game_bars
-game_bars                           ; subroutine: once per frame, in the game: a tick of the music, the three scroll bands, and in between
+game_bars                           ; subroutine: once per frame, in the game: the three scroll bands, and in between
         lda #54                     ; rows of the plasma (4 a frame, the whole plasma every 6 frames) (while the beam is drawing the screen; the colours change under it)
 -       cmp VIC_RASTER              ; wait for line 54 ...
         bne -                       ; (equal, not "at least": the work before this ends below line 54 or after the wrap)
-        jsr music_tick
         ldy #BAND1_LINE             ; row 1 (below the score) starts: the first scroll band
         jsr wait_line
         lda band1
@@ -198,6 +195,4 @@ game_bars                           ; subroutine: once per frame, in the game: a
         lda band3
         sta VIC_CTRL2
         jsr plasma_step             ; 1 row
-        ldy #210                    ; half a frame after the first tick
-        jsr wait_line
-        jmp music_tick              ; the second tick of the frame (it returns to our caller)
+        rts                         ; return to the caller
