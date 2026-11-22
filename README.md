@@ -113,7 +113,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     .vscode/              build task, test task, launch config
     Makefile              command-line build
 
-Every line of every file is commented (the files in `src/sound/` come from the tracker as they are). `main.asm` pulls the others in with `!source`, in the order they should sit in memory: code first, then data, then the sprites at `$2000`, then the sound at `$3000`. A build check stops when the code and data reach `$2000`; there are only a few dozen bytes left below it. `hardware.asm` and `config.asm` only contain names, so they use no memory. When you add a file, add a `!source` line for it in `main.asm` (paths are relative to the project folder) and check that the sprites still start at `$2000`. The Makefile rebuilds when any file in `src/` changes.
+Every line of every file is commented (the files in `src/sound/` come from the tracker as they are). `main.asm` pulls the others in with `!source`, in the order they should sit in memory: code first, then data, then the sprites at `$2000`, then the sound at `$3000`. A build check stops when the code and data reach `$2000`; there are only a few dozen bytes left below it. `hardware.asm` and `config.asm` only contain names, so they use no memory. When you add a file, add a `!source` line for it in `main.asm` (paths are relative to the project folder) and check that the sprites still start at `$2000`. The Makefile rebuilds when any file in `src/` or `src/sound/` changes.
 
 ## How it works
 

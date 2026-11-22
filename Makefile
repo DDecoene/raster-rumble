@@ -9,7 +9,8 @@ VERSION = $(shell tools/version.sh)
 
 all: $(OUT)
 
-$(OUT): $(wildcard src/*.asm)
+# src/sound/ too: after a new export from the tracker, make (and make vice) must build again
+$(OUT): $(wildcard src/*.asm) $(wildcard src/sound/*.asm)
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/$(NAME).lbl -r build/$(NAME).rpt -o $@ $(SRC)
 
