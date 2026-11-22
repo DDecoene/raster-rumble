@@ -1,6 +1,6 @@
 # Design: all sound through the WebSidTracker player
 
-Status: approved 2026-11-22, being built on `feature/websidtracker-sound`.
+Status: built (2026-11-22), see As built at the end.
 
 ## Why
 
@@ -26,3 +26,13 @@ Not now: a new soundtrack (that is the next step, by ear), a filter (the player 
 - **Removed:** `music_tick`, the old `update_music` body, the three `sfx_*` routines, the SID set-up in `main.asm`, the music and drum tables in `data.asm`, and their variables and constants.
 
 Other ways that were not taken: a raster interrupt for `music_play` (the game draws its bars by waiting on raster lines, an interrupt in the middle would shift them); two player calls per frame (the player counts one call as one frame).
+
+## As built
+
+What the work found and changed against the plan above:
+
+- **Memory.** The game's code and data already reach almost to `$2000`, so the 2 KB player does not fit below the sprites. The sound sits at `$3000`, after the sprites and the character set at `$2800`-`$2fff`. A build check stops when the code reaches `$2000` (a few dozen bytes are left) and another when the sound reaches the tables at `$c000`.
+- **The game frame.** The frame work after line `$fb` already takes the beam to about line 26, so the player could not run there: `game_bars` waited for exactly line 54 and lost a whole frame. Now `game_bars` waits for its first band (line 59, "at least") and calls `update_music` after the plasma, in the free lines from about 200; the main loop waits for line `$fb` *or later*, so a frame where the music runs long goes on at once. Measured: 3244 frames, no frame lost, the first band at most one line late.
+- **The title, game over and chapter screens** were already full: their work after the bars ended near line 53 with the bars at 54. To make room without changing the picture: `raster_show` no longer waits for line 54 (the bars wait for line 80 themselves); `update_stars` has a quick path for a star that stays in its cell; the scroller colours, the tagline, the prompt and the clearing of the bouncing letters are written out. Measured: the work with the music ends at most 148 of 156 lines after the bars, no late frame.
+- **The hit** plays its thump on voice 1 (the bass), as designed, so the arpeggio on voice 2 is never cut.
+
