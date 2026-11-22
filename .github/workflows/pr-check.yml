@@ -47,3 +47,6 @@ jobs:
 
       - name: It must build
         run: make
+
+      - name: The web site must build
+        run: make site
