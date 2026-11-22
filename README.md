@@ -30,7 +30,7 @@ A title screen waits for a key (or the joystick) before the game starts. You fly
 
     make        # assembles build/raster-rumble.prg
     make test   # builds, then runs it in the browser emulator (see below)
-    make vice   # builds, then runs it in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice)
+    make vice   # builds, then runs it in VICE (x64sc, the accurate emulator, with a 6581 SID: use it to judge the sound; brew install vice)
     make clean
 
 Controls: joystick in port 2. In the browser emulator (`make test`) the arrow keys are the joystick (port 2), and Space is fire.

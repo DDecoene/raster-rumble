@@ -55,5 +55,6 @@ clean:
 
 # build and run in VICE (x64sc, the accurate emulator: use it to judge the sound; brew install vice).
 # tools/vice-joystick.rc puts joystick port 2 on the arrow keys and Space (VICE's default is the numeric keypad).
+# -sidenginemodel 256 is reSID with the MOS 6581, the chip the music is composed for (whatever VICE's own setting is).
 vice: $(OUT)
-	x64sc -addconfig tools/vice-joystick.rc -autostart $(OUT)
+	x64sc -addconfig tools/vice-joystick.rc -sidenginemodel 256 -autostart $(OUT)
