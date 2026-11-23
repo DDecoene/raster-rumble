@@ -6,7 +6,7 @@ room.bin is loaded at $4000:
   $6000  the hires bitmap
 door.bin is loaded at $8000: the same room with the door open. Three colour screens (the door opens further and
 further), the sprites at $8c00, the bitmap at $a000.
-bed.bin is loaded at $3000: the cells that change when the boy is in bed. Per cell its number (2 bytes), the bitmap
+bed.bin is loaded at $3800: the cells that change when the boy is in bed. Per cell its number (2 bytes), the bitmap
 (8) and the colour in the seven screens (7), and $ffff at the end. The program swaps them with what is there.
 text.bin is loaded at $1800, $600 bytes per shot: four rows of bitmap with the sentences (1280 bytes), then the
 three cells of the clock (24 bytes).
@@ -200,6 +200,7 @@ SHOTS = [
     ('22:52', [(21, 'It does not work.'), (23, 'He does not know why.')]),
     ('22:52', [(22, '"Bed. Now."')]),
     ('22:58', []),
+    ('22:59', []),
 ]
 
 
@@ -228,7 +229,7 @@ def texts():
 
 def clock_face(clock):
     digits = {'2': '110 001 010 100 111', '4': '101 101 111 001 001', '1': '010 110 010 010 111',
-              '8': '111 101 111 101 111', '5': '111 100 110 001 110', ':': '0 1 0 1 0'}
+              '8': '111 101 111 101 111', '9': '111 101 111 001 110', '5': '111 100 110 001 110', ':': '0 1 0 1 0'}
     face = np.zeros((8, 24), bool)
     x = 3
     for ch in clock:
@@ -350,7 +351,7 @@ def head_sprites():
     return bytes(sprites)
 
 
-for name, data, most in (('room', room(), 0x4000), ('door', door(), 0x4000), ('bed', bed_cells(), 0x1000),
-                         ('text', texts(), 0x1800)):
+for name, data, most in (('room', room(), 0x4000), ('door', door(), 0x4000), ('bed', bed_cells(), 0x800),
+                         ('text', texts(), 0x2000)):
     assert len(data) <= most, name
     open(f'src/intro/{name}.bin', 'wb').write(data)

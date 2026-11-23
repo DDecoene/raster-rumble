@@ -86,16 +86,16 @@ release:
 	@tools/release.sh
 
 # the intro of the film, a program of its own for now: build it and show it in VICE
-build/intro.prg: src/intro/intro.asm $(wildcard src/intro/*.bin) src/hardware.asm
+build/intro.prg: $(wildcard src/intro/*.asm) $(wildcard src/intro/*.bin) src/hardware.asm
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/intro.lbl -o $@ src/intro/intro.asm
 
 intro: build/intro.prg
 	x64sc -addconfig tools/vice-joystick.rc -sidenginemodel 256 -autostartprgmode 1 -autostart build/intro.prg
 
-# draw the picture of the intro again (only after a change in tools/intro-room.py)
+# draw the picture of the intro again (only after a change in tools/intro-room.py or tools/intro-dream.py, which runs both)
 intro-art:
 	@mkdir -p build
 	@[ -x build/venv/bin/python ] || python3 -m venv build/venv
 	@build/venv/bin/python -c 'import PIL, numpy' 2>/dev/null || build/venv/bin/pip -q --disable-pip-version-check install pillow numpy
-	build/venv/bin/python tools/intro-room.py
+	build/venv/bin/python tools/intro-dream.py

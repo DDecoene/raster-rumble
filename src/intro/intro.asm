@@ -1,5 +1,5 @@
 ; intro.asm - the intro of the film, shot by shot (see docs/story.md). A program of its own, the game is not in it.
-; For now: shots 1 to 3. They play and start again.
+; For now: shots 1 to 4. They play and start again.
 ; The picture is made by tools/intro-room.py. All seven colour screens are in memory at the same time, so the light
 ; changes by pointing the VIC at another screen: one write to VIC_MEMCTL.
 
@@ -24,8 +24,12 @@ TEXT2A    = 11                      ; shot 2: "It does not work.", row 21, colum
 TEXT2B    = 80 + 9                  ; shot 2: "He does not know why.", row 23, column 9
 LEN2A     = 17                      ; their letters
 LEN2B     = 21
+DREAM     = $c000                   ; dream.bin: the screen, the sprites, the characters, the stars (see tools/intro-dream.py)
+DREAM_PTR = DREAM + $3f8            ; its sprite pointers; sprite 0 of dream.bin is number 16
+STARS     = 48
+MIDDLE    = 137                     ; the raster line where the eyelids meet
 DOOR      = $8000                   ; door.bin: three colour screens, the sprites; its bitmap is at $a000
-BED       = $3000                   ; bed.bin: the cells that change when he is in bed
+BED       = $3800                   ; bed.bin: the cells that change when he is in bed
 TEXT3     = 40 + 14                 ; shot 3: "Bed. Now." with its quotes, row 22, column 14
 TEXTS     = $1800                   ; text.bin: $600 bytes per shot
 BAR_BITS  = $6000 + 21 * 320        ; the bar in the bitmap
@@ -40,9 +44,12 @@ nod       = $07                     ; frames the head stays one line lower
 rnd       = $08                     ; random number
 look      = $09                     ; how far the head is turned to the magazine, in pixels
 random_light = $0a                  ; frames left of a flicker
-shot      = $0b                     ; 0 = shot 1, 1 = shot 2, 2 = the door, 3 = the bed (both shot 3)
+shot      = $0b                     ; 0 = shot 1, 1 = shot 2, 2 = the door, 3 = the bed (both shot 3), 4 = the clock and the eyelids, 5 = the dream (both shot 4)
 sink      = $0c                     ; how far the head hangs down, in lines
 beat      = $0d                     ; frame / 4 (not in shot 1)
+lid       = $11                     ; how far the eye is open: raster lines above and below MIDDLE
+slit      = $12                     ; the background colour between the eyelids
+star      = $13                     ; the first star of this frame: half of them move in a frame
 in_bed    = $0e                     ; 1 = the cells of bed.bin are in the picture
 cell      = $0f                     ; number of a cell, 2 bytes
 from      = $fb                     ; pointers, 2 bytes each
@@ -77,6 +84,7 @@ start
         lda #0
         sta shot
         sta in_bed
+        sta star
         sta SPR2_COLOR              ; sprites 2 and 3: the head, black
         sta SPR2_COLOR + 1
 
@@ -118,11 +126,29 @@ new_shot                            ; everything to the start of the shot in the
         sta DOOR + $800 + BAR - 1,x
         dex
         bne -
-        jsr load_text
+        lda #$3b                    ; the dream changes these: back to the bitmap
+        sta VIC_CTRL1
+        lda #$08
+        sta VIC_CTRL2
+        lda #0
+        sta VIC_BG
+        sta $d017
+        sta $d01d
+        sta slit
+        sta SPR_XHI
+        sta SPR2_COLOR              ; the head is black (the dream uses these sprites too)
+        sta SPR2_COLOR + 1
+        lda #81
+        sta lid
+        lda shot
+        cmp #5
+        bne +
+        jmp start_dream             ; no room, no hum
++       jsr load_text
         lda #0                      ; must he be in bed in this shot?
         ldx shot
         cpx #3
-        bne +
+        bcc +
         lda #1
 +       cmp in_bed
         beq +
@@ -158,7 +184,12 @@ loop
 -       lda VIC_RASTER              ; wait for line 251, below the picture
         cmp #251
         bne -
-        lda CIA2_PORTA              ; 0 to 6: the room, at $4000. 7 to 9: the door is open, at $8000
+        lda shot
+        cmp #4
+        bcc +
+        jsr play_late               ; the last two shots show their own pictures
+        jmp .next
++       lda CIA2_PORTA              ; 0 to 6: the room, at $4000. 7 to 9: the door is open, at $8000
         and #$fc
         ldx light
         cpx #7
@@ -209,7 +240,10 @@ loop
         lda shot                    ; the next shot, and the first one after the last
         clc
         adc #1
-        and #3
+        cmp #6
+        bcc .shot_ok
+        lda #0
+.shot_ok
         sta shot
         jmp new_shot
 +       lda VIC_RASTER              ; the work can be done within one line: do not run twice on line 251
@@ -217,8 +251,8 @@ loop
         beq -
         jmp loop
 
-shot_end_lo !byte <700, <800, <560, <480        ; 14, 16, 11 and 10 seconds
-shot_end_hi !byte >700, >800, >560, >480
+shot_end_lo !byte <700, <800, <560, <480, <560, <1000   ; frames, 50 in a second
+shot_end_hi !byte >700, >800, >560, >480, >560, >1000
 
 !zone load_text
 load_text                           ; subroutine: put the sentences and the time of this shot in the bitmap
@@ -480,6 +514,630 @@ play_bed                            ; subroutine: one frame of the bed: dark, th
 +       ora #$10
         sta SID_VOLUME
         rts
+
+!zone play_late
+play_late                           ; subroutine: one frame of the clock, the eyelids or the dream
+        jsr count_beats
+        lda shot
+        cmp #5
+        beq +
+        jmp play4
++       jmp play5
+
+show_dream                          ; subroutine: the VIC sees the dream, as characters
+        lda CIA2_PORTA
+        and #$fc                    ; $c000
+        sta CIA2_PORTA
+        lda #$02                    ; screen at $c000, characters at $c800
+        sta VIC_MEMCTL
+        lda #$18                    ; multicolour on: colours 0 to 7 still look the same, and with extended colour
+        sta VIC_CTRL2               ; the VIC draws black: that makes the eyelids
+        rts
+
+!zone lids
+; The eyelids: an impossible mode of the VIC (extended colour with bitmap or multicolour) draws only black. It is on
+; everywhere except from 'lid' lines above MIDDLE to 'lid' lines below.
+lids                                ; subroutine: draw the eyelids. A = the good mode (VIC_CTRL1)
+        sta to                      ; keep it
+        ora #$40
+        sta VIC_CTRL1               ; black, from the bottom of the picture on
+        ldx slit                    ; the colour can wait there already, nobody sees it
+        stx VIC_BG
+        ldx to
+        lda #MIDDLE
+        sec
+        sbc lid
+-       cmp VIC_RASTER
+        bne -
+        stx VIC_CTRL1               ; one write, before the line becomes visible
+        txa
+        ora #$40
+        tax
+        lda #MIDDLE
+        clc
+        adc lid
+-       cmp VIC_RASTER
+        bne -
+        stx VIC_CTRL1
+        rts
+
+!zone big_clock
+big_clock                           ; subroutine: five large sprites show the time; X = 0: 22:59, X = 5: 23:00
+        ldy #0
+-       lda clock_digit,x
+        sta DREAM_PTR,y
+        lda #COLOR_RED
+        sta SPR0_COLOR,y
+        inx
+        iny
+        cpy #5
+        bne -
+        ldx #9
+-       lda clock_place,x
+        sta SPR0_X,x
+        dex
+        bpl -
+        lda #$1f
+        sta $d017                   ; twice as wide and twice as high
+        sta $d01d
+        lda #0
+        sta SPR_XHI
+        lda shot                    ; in the dream the clock is below the line of light
+        cmp #5
+        bne +
+        lda #158
+        sta SPR0_Y
+        sta SPR1_Y
+        sta SPR2_Y
+        sta SPR2_Y + 2
+        sta SPR2_Y + 4
++
+        lda frame                   ; the colon goes on and off
+        and #$20
+        beq +
+        lda #$04
++       eor #$1f
+        sta SPR_ENABLE
+        rts
+
+clock_digit !byte 17, 17, 21, 19, 20, 17, 18, 21, 16, 16
+clock_place !byte 74, 116, 118, 116, 161, 116, 203, 116, 247, 116
+
+!zone play4
+; In beats: 0 the large clock; 44 the room; 56 the eyes close, 80 open a little, 94 close; 140 the end
+play4                               ; subroutine: one frame of the clock and the eyelids
+        lda frame
+        and #$1f
+        bne .no_tick
+        lda frame + 1               ; the tick of the clock, as long as we look at it
+        bne .no_tick
+        lda frame
+        cmp #176
+        bcs .no_tick
+        lda #$60
+        sta SID_FREQ3H
+        lda #$00
+        sta SID_SR3
+        lda #$01
+        sta SID_AD3
+        lda #$11
+        sta SID_CTRL3
+        bne .sound
+.no_tick
+        lda #$10
+        sta SID_CTRL3
+.sound  lda beat
+        cmp #44
+        bcs .room
+        lda #$10 + HUM - 4          ; the hum is far away
+        sta SID_VOLUME
+        jsr show_dream
+        lda #$5b                    ; black: extended colour with multicolour
+        sta VIC_CTRL1
+        ldx #0
+        jmp big_clock
+.room
+        lda #0
+        sta SPR_ENABLE
+        lda CIA2_PORTA
+        and #$fc
+        ora #$02
+        sta CIA2_PORTA
+        lda #$08
+        sta VIC_CTRL2
+        ldx #5
+        lda beat
+        cmp #110                    ; almost asleep: less light
+        bcc +
+        ldx #4
++       txa
+        asl
+        asl
+        asl
+        asl
+        ora #$08
+        sta VIC_MEMCTL
+        lda lid                     ; the sound goes with the eyes
+        lsr
+        lsr
+        lsr
+        lsr                         ; 0 to 5
+        clc
+        adc #$11
+        sta SID_VOLUME
+
+        ldx #81                     ; where do the eyelids want to be?
+        lda beat
+        cmp #56
+        bcc .move
+        ldx #26
+        cmp #80
+        bcc .move
+        ldx #50
+        cmp #94
+        bcc .move
+        ldx #1
+        lda frame                   ; the last time they go slowly
+        lsr
+        bcs .draw
+.move   cpx lid
+        beq .draw
+        bcs .up
+        dec lid
+        bne .draw
+.up     inc lid
+.draw   lda #$3b
+        jmp lids
+
+!zone dream
+start_dream                         ; everything to the start of the dream
+        ldx #0                      ; an empty screen, white letters
+-       lda #0
+        sta DREAM,x
+        sta DREAM + $100,x
+        sta DREAM + $200,x
+        sta DREAM + $2e8,x
+        lda #1
+        sta COLOR_RAM,x
+        sta COLOR_RAM + $100,x
+        sta COLOR_RAM + $200,x
+        sta COLOR_RAM + $2e8,x
+        inx
+        bne -
+        ldx #STARS - 1              ; nothing to wipe out yet: cell 0
+-       lda #0
+        sta old_lo,x
+        lda #>DREAM
+        sta old_hi,x
+        dex
+        bpl -
+        lda #$07                    ; the chord of the dream: three soft triangles that swell slowly, G, D and B
+        sta SID_RES
+        lda #$40
+        sta SID_FC_HI
+        ldx #2
+        ldy #14
+-       lda chord_lo,x
+        sta SID_FREQ1L,y
+        lda chord_hi,x
+        sta SID_FREQ1H,y
+        lda #$c9
+        sta SID_AD1,y
+        lda #$aa
+        sta SID_SR1,y
+        tya
+        sec
+        sbc #7
+        tay
+        dex
+        bpl -
+        lda #1
+        sta lid
+        sta slit
+        jmp loop
+
+chord_lo !byte <1669, <2500, <4205
+chord_hi !byte >1669, >2500, >4205
+!zone play5
+; In beats: 0 a line of light; 6 the clock says 23:00; 30 the line opens; 70 the eyelids are gone; 74 Pixel glows;
+; 90 the eye opens; 104 and 120 the first sentences; 172 they go; 180 the last one; 250 the end
+play5                               ; subroutine: one frame of the dream
+        jsr show_dream
+        ldx #0
+        lda beat
+        cmp #6
+        bcc .sprites
+        cmp #30
+        bcs .pixel
+        cmp #6
+        bne +
+        lda frame
+        and #3
+        bne +
+        lda #$03                    ; one low stroke
+        sta SID_FREQ3H
+        lda #$09
+        sta SID_AD3
+        lda #$00
+        sta SID_SR3
+        lda #$1f
+        sta SID_VOLUME
+        lda #$11
+        sta SID_CTRL3
++       ldx #5
+        jsr big_clock
+        jmp .open
+.sprites
+        stx SPR_ENABLE
+        jmp .open
+.pixel  jsr pixel
+.open   lda beat
+        cmp #30
+        bcs .opening
+        lda #$1b
+        jmp lids                    ; only the line of light
+.opening
+        bne +
+        lda frame
+        and #3
+        bne +
+        lda #$1c                    ; the chord begins
+        sta SID_VOLUME
+        lda #$10                    ; voice 3 has played the stroke: gate off, its own note and shape again
+        sta SID_CTRL3
+        lda chord_lo + 2
+        sta SID_FREQ3L
+        lda chord_hi + 2
+        sta SID_FREQ3H
+        lda #$c9
+        sta SID_AD3
+        lda #$aa
+        sta SID_SR3
+        lda #$11
+        sta SID_CTRL1
+        sta SID_CTRL2
+        sta SID_CTRL3
++       jsr move_stars
+        jsr words
+        lda beat
+        cmp #70
+        bcs .all
+        lda frame
+        lsr
+        bcs +
+        inc lid
++       ldx #0                      ; the light in the crack: white, cyan, light blue, blue, black
+        lda lid
+-       cmp slit_at,x
+        bcc +
+        inx
+        bne -
++       lda slit_color,x
+        sta slit
+        lda #$1b
+        jmp lids
+.all    lda #0                      ; no more eyelids
+        sta VIC_BG
+        lda #$1b
+        sta VIC_CTRL1
+        rts
+
+slit_at    !byte 3, 6, 12, 22, 255
+slit_color !byte 1, 3, 14, 6, 0
+
+!zone pixel
+pixel                               ; subroutine: Pixel: the eye, the block, two layers of glow (sprites 0 to 3)
+        lda #22
+        ldx beat
+        cpx #90
+        bcc .eye
+        lda #23
+        cpx #92
+        bcc .eye
+        lda #24                     ; open
+        cpx #112                    ; and a blink
+        beq .blink
+        cpx #164
+        beq .blink
+        cpx #225
+        bne .eye
+.blink  lda #22
+.eye    sta DREAM_PTR
+        ldy #25
+        sty DREAM_PTR + 1
+        iny
+        sty DREAM_PTR + 2
+        iny
+        sty DREAM_PTR + 3
+        lda #0                      ; the eye is black
+        sta SPR0_COLOR
+        lda frame                   ; float: up and down in a slow wave
+        lsr
+        lsr
+        lsr
+        and #$0f
+        tax
+        lda wave,x
+        clc
+        adc #MIDDLE - 10
+        sta SPR0_Y
+        sta SPR1_Y
+        sta SPR2_Y
+        sec
+        sbc #10
+        sta SPR2_Y + 2              ; the outer glow is twice as large
+        lda #172
+        sta SPR0_X
+        sta SPR1_X
+        sta SPR2_X
+        lda #160
+        sta SPR2_X + 2
+        lda #$08
+        sta $d017
+        sta $d01d
+        lda #0
+        sta SPR_XHI
+        lda beat                    ; it comes up from dark to warm
+        sec
+        sbc #74
+        bcs +
+        lda #0
+        sta SPR_ENABLE
+        rts
++       lsr
+        lsr
+        cmp #3
+        bcc +
+        lda #3
++       tax
+        lda block_color,x
+        sta SPR1_COLOR
+        lda glow_color,x
+        sta SPR2_COLOR
+        lda #9
+        sta SPR2_COLOR + 1
+        lda pixel_on,x
+        sta SPR_ENABLE
+        lda beat                    ; a high note when the eye opens
+        cmp #92
+        bne +
+        lda frame
+        and #3
+        bne +
+        lda #$10
+        sta SID_CTRL3
+        lda #<9997
+        sta SID_FREQ3L
+        lda #>9997
+        sta SID_FREQ3H
+        lda #$0a
+        sta SID_AD3
+        sta SID_SR3
+        lda #$11
+        sta SID_CTRL3
++       rts
+
+wave        !byte 0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0, 0
+block_color !byte 9, 8, 7, 7
+glow_color  !byte 9, 9, 8, 8
+pixel_on    !byte $08, $0c, $0e, $0f
+
+!zone words
+words                               ; subroutine: the sentences of the dream, a letter in a beat
+        lda frame
+        and #3
+        beq +
+        rts
++       lda beat
+        cmp #172
+        bcc .first
+        bne .last
+        ldx #159                    ; the first two go
+        lda #0
+-       sta DREAM + BAR,x
+        dex
+        cpx #$ff
+        bne -
+        rts
+.first  sec
+        sbc #104
+        bcc .done
+        cmp #TEXT_A_LEN
+        bcs +
+        tax
+        lda text_a,x
+        beq .done
+        sta DREAM + TEXT_A_POS,x
+        adc #1                      ; (the carry is 0)
+        sta DREAM + TEXT_A_POS + 40,x
+.done   rts
++       lda beat
+        sbc #120
+        bcc .done
+        cmp #TEXT_B_LEN
+        bcs .done
+        tax
+        lda text_b,x
+        beq .done
+        sta DREAM + TEXT_B_POS,x
+        adc #1
+        sta DREAM + TEXT_B_POS + 40,x
+        rts
+.last   sec
+        sbc #180
+        bcc .done
+        cmp #TEXT_C_LEN
+        bcs .done
+        tax
+        lda text_c,x
+        beq .done
+        sta DREAM + TEXT_C_POS,x
+        adc #1
+        sta DREAM + TEXT_C_POS + 40,x
+        rts
+
+        !source "src/intro/dream_text.asm"
+
+!zone move_stars
+age     = DREAM + $7c0
+sx_lo   = DREAM + $c00
+sx_hi   = DREAM + $c40
+sy_lo   = DREAM + $c80
+sy_hi   = DREAM + $cc0
+vx_lo   = DREAM + $d00
+vx_hi   = DREAM + $d40
+vy_lo   = DREAM + $d80
+vy_hi   = DREAM + $dc0
+first   = DREAM + $e00              ; the same, to begin again: speed x, y, place x, y
+old_lo  = DREAM + $740              ; the cell where the star is now
+old_hi  = DREAM + $780
+
+move_stars                          ; subroutine: half of the stars fly on, away from the middle, faster and faster
+        ldx star
+.star   lda old_lo,x                ; wipe it out
+        sta to
+        lda old_hi,x
+        sta to + 1
+        ldy #0
+        tya
+        sta (to),y
+        clc                         ; place + speed
+        lda sx_lo,x
+        adc vx_lo,x
+        sta sx_lo,x
+        lda sx_hi,x
+        adc vx_hi,x
+        sta sx_hi,x
+        cmp #160
+        bcs .again                  ; past the left or right edge
+        lda sy_lo,x
+        adc vy_lo,x
+        sta sy_lo,x
+        lda sy_hi,x
+        adc vy_hi,x
+        sta sy_hi,x
+        cmp #24
+        bcc .again
+        cmp #168
+        bcc .inside
+.again  lda first,x                 ; a new star near the middle
+        sta vx_lo,x
+        lda first + $40,x
+        sta vx_hi,x
+        lda first + $80,x
+        sta vy_lo,x
+        lda first + $c0,x
+        sta vy_hi,x
+        lda first + $100,x
+        sta sx_lo,x
+        lda first + $140,x
+        sta sx_hi,x
+        lda first + $180,x
+        sta sy_lo,x
+        lda first + $1c0,x
+        sta sy_hi,x
+        lda #0
+        sta age,x
+.inside txa                         ; every 16 frames: an eighth faster, not all the stars in the same frame
+        asl
+        eor frame
+        and #$0e
+        bne .plot
+        lda age,x
+        cmp #31
+        bcs +
+        inc age,x
++       lda vx_hi,x
+        sta from
+        lda vx_lo,x
+        ldy #3
+-       pha                         ; divide by 8, with the sign
+        lda from
+        cmp #$80
+        ror from
+        pla
+        ror
+        dey
+        bne -
+        clc
+        adc vx_lo,x
+        sta vx_lo,x
+        lda from
+        adc vx_hi,x
+        sta vx_hi,x
+        lda vy_hi,x
+        sta from
+        lda vy_lo,x
+        ldy #3
+-       pha
+        lda from
+        cmp #$80
+        ror from
+        pla
+        ror
+        dey
+        bne -
+        clc
+        adc vy_lo,x
+        sta vy_lo,x
+        lda from
+        adc vy_hi,x
+        sta vy_hi,x
+.plot   lda sy_hi,x                 ; the row
+        lsr
+        lsr
+        lsr
+        tay
+        lda sx_hi,x                 ; the column: two pixels per step, so 4 steps in a cell
+        lsr
+        lsr
+        clc
+        adc row_lo,y
+        sta to
+        sta old_lo,x
+        lda row_hi,y
+        adc #0
+        sta to + 1
+        sta old_hi,x
+        lda sx_lo,x                 ; the pixel in the cell: x 0-7
+        asl                         ; its highest bit is the odd pixel
+        lda sx_hi,x
+        rol
+        and #7
+        sta from
+        lda sy_hi,x
+        and #7
+        asl
+        asl
+        asl
+        ora from
+        clc
+        adc #1                      ; characters 1 to 64
+        ldy #0
+        sta (to),y
+        lda to + 1                  ; the colour
+        clc
+        adc #(>COLOR_RAM) - >DREAM
+        sta to + 1
+        lda age,x
+        lsr
+        tay
+        lda star_color,y
+        ldy #0
+        sta (to),y
+        inx
+        inx
+        cpx #STARS
+        bcs +
+        jmp .star
++       lda star                    ; the other half next time
+        eor #1
+        sta star
+        rts
+
+star_color !byte 6, 6, 6, 6, 4, 4, 4, 3, 3, 3, 1, 1, 1, 1, 1, 1
+row_lo  !for i, 0, 24 { !byte <(DREAM + i * 40) }
+row_hi  !for i, 0, 24 { !byte >(DREAM + i * 40) }
 
 !zone play2
 ; Shot 2 in units of 4 frames ('beat'): 0 the light comes up, 17 the last keys, 40 the RETURN key, then nothing;
@@ -743,3 +1401,5 @@ text_wait                           ; frames after every letter of "He typed it 
         !bin "src/intro/room.bin"
         * = DOOR
         !bin "src/intro/door.bin"
+        * = DREAM
+        !bin "src/intro/dream.bin"
