@@ -61,3 +61,35 @@ jobs:
           git add raster-rumble.prg README.txt
           git commit -q -m "Build of v$version"
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" play
+
+  # The web site at https://ddecoene.github.io/raster-rumble/: the landing page, and /play/, which always starts
+  # the newest version. The game goes into the site with the version in its name, so the emulator's offline cache
+  # can never serve an old build (see docs/design-landing-page.md). Runs after the release, from the same commit.
+  # One-time GitHub setup: Settings, Pages, Source "GitHub Actions".
+  site:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write      # to publish the site
+      id-token: write   # GitHub Pages checks who publishes with it
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the assembler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends acme
+
+      - name: Build the game and the site
+        run: make site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+      - name: Publish the site
+        id: deploy
+        uses: actions/deploy-pages@v4

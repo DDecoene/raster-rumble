@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>raster rumble: a Commodore 64 game in 6502 assembly</title>
+<meta name="description" content="A Commodore 64 dodge game written in 6502 assembly, with raster bars, SID music and a story about a ship inside a C64 at night. Play it in your browser.">
+<meta property="og:title" content="raster rumble">
+<meta property="og:description" content="A Commodore 64 game in 6502 assembly. Play it in your browser.">
+<meta property="og:image" content="@SITE@/img/social-preview.png">
+<meta property="og:url" content="@SITE@/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 5 5%22%3E%3Crect width=%225%22 height=%221%22 fill=%22%23352879%22/%3E%3Crect y=%221%22 width=%225%22 height=%221%22 fill=%22%236c5eb5%22/%3E%3Crect y=%222%22 width=%225%22 height=%221%22 fill=%22%2370a4b2%22/%3E%3Crect y=%223%22 width=%225%22 height=%221%22 fill=%22%236c5eb5%22/%3E%3Crect y=%224%22 width=%225%22 height=%221%22 fill=%22%23352879%22/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="hero">
+  <div class="bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="wrap">
+    <p class="kicker">Commodore 64 &middot; 6502 assembly &middot; alpha v@VERSION@</p>
+    <h1>raster rumble</h1>
+    <p class="lead">It is 1986. A kid forgot to switch off the C64. Inside, a small ship called Pixel has until 07:00 to survive the night.</p>
+    <p class="actions">
+      <a class="btn primary" href="play/">&#9654; Play it now</a>
+      <a class="btn" href="#download">Download</a>
+      <a class="btn" href="https://github.com/DDecoene/raster-rumble">Source</a>
+    </p>
+    <p class="note">Runs in your browser in the vc64web emulator, nothing to install. Arrow keys steer, Space is fire, any key starts. The first start takes a few seconds.</p>
+  </div>
+  <figure class="shot wide">
+    <img src="img/gameplay.gif" width="768" height="540" alt="Gameplay: the ship dodges falling enemies while stars scroll by.">
+  </figure>
+</header>
+
+<main>
+
+<section class="wrap" aria-labelledby="h-story">
+  <h2 id="h-story">The Night of the Raster Beam</h2>
+  <p>Inside the Commodore 64 lives Pixel, a sprite that has hung in the same spot for years. Tonight the Raster Beam, the beam that draws the screen from top to bottom 50 times a second, starts to stutter. If it stops, everything in memory disappears, Pixel included.</p>
+  <p>At 07:00 someone will pull the plug. To still exist after that, Pixel has to write its name to the floppy disk, the only place that survives the power cut. Every hour of the night is a chapter, from the top of the screen to the deepest layers of memory.</p>
+  <ol class="clock">
+    <li><b>23:00</b> Boot</li>
+    <li><b>01:00</b> The Glitch</li>
+    <li><b>03:00</b> The Border</li>
+    <li><b>04:30</b> The Memory</li>
+    <li><b>06:00</b> The Raster Beam</li>
+    <li><b>07:00</b> The Disk</li>
+  </ol>
+  <p class="small">The night is not over yet: chapters are added one release at a time. Where the game is now is on the <a href="https://github.com/DDecoene/raster-rumble#the-story">GitHub page</a>.</p>
+</section>
+
+<section class="gallery" aria-label="Screenshots">
+  <figure class="shot"><img src="img/title.png" width="1152" height="810" loading="lazy" alt="Title screen with raster bars and bouncing letters."><figcaption>Title screen</figcaption></figure>
+  <figure class="shot"><img src="img/chapter.png" width="1152" height="810" loading="lazy" alt="Chapter screen with the time and one sentence of the story."><figcaption>Between two chapters</figcaption></figure>
+  <figure class="shot"><img src="img/glitch.png" width="1152" height="810" loading="lazy" alt="The Glitch, a green chip, falls next to an enemy."><figcaption>01:00, the Glitch</figcaption></figure>
+  <figure class="shot"><img src="img/border.png" width="1152" height="810" loading="lazy" alt="Enemies drift sideways in The Border."><figcaption>03:00, The Border</figcaption></figure>
+</section>
+
+<section class="wrap" aria-labelledby="h-how">
+  <h2 id="h-how">Under the hood</h2>
+  <ul class="facts">
+    <li><b>Pure 6502 assembly.</b> Assembled with ACME, no BASIC, no C, no engine. The whole game fits below <code>$4000</code>, and every line of the source has a comment.</li>
+    <li><b>Raster timing.</b> Everything runs in step with the beam: the raster bars, the plasma and the parallax scroll bands change colour and scroll while the VIC-II draws those lines. The bars pump on the kick drum.</li>
+    <li><b>Sprites and a RAM character set.</b> Ship and enemies are hardware sprites with 9-bit X positions, the starfield scrolls in a character set in RAM.</li>
+    <li><b>SID music and sound effects</b> from <a href="https://github.com/DDecoene/WebSidTracker">WebSidTracker</a>, a SID tracker that runs in the browser, made for this game. The tune is a tracker project: <a href="https://ddecoene.github.io/WebSidTracker/tracker.html">open the tracker</a>, load <a href="https://github.com/DDecoene/raster-rumble/blob/main/music/raster-rumble.json"><code>raster-rumble.json</code></a> and change it.</li>
+    <li><b>Real hardware.</b> The <code>.prg</code> runs on a Kung Fu Flash, an Ultimate 64 or any emulator, and the <code>.d64</code> is a disk image.</li>
+  </ul>
+</section>
+
+<section class="wrap" id="download" aria-labelledby="h-download">
+  <h2 id="h-download">Download v@VERSION@</h2>
+  <p class="actions">
+    <a class="btn" href="https://github.com/DDecoene/raster-rumble/releases/download/v@VERSION@/raster-rumble-v@VERSION@.prg">raster-rumble-v@VERSION@.prg</a>
+    <a class="btn" href="https://github.com/DDecoene/raster-rumble/releases/download/v@VERSION@/raster-rumble-v@VERSION@.d64">raster-rumble-v@VERSION@.d64</a>
+  </p>
+  <p>Joystick in port 2. Older versions and the release notes are on the <a href="https://github.com/DDecoene/raster-rumble/releases">releases page</a>.</p>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>raster rumble by Dennis Decoene, <a href="https://github.com/DDecoene/raster-rumble/blob/main/LICENSE">CC BY-NC-SA 4.0</a>. The browser version runs in <a href="https://vc64web.github.io">vc64web</a> (based on VirtualC64) with the free Open ROMs; we only link to it.</p>
+    <p><a href="play/">Play</a> <a href="https://github.com/DDecoene/raster-rumble">GitHub</a> <a href="https://github.com/DDecoene/WebSidTracker">WebSidTracker</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
