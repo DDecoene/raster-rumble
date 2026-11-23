@@ -84,6 +84,7 @@ How it works:
 - `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or whose game or web site does not build.
 - When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
 - So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
+- The screenshots do not have to show the newest version: `make screenshots` makes the title screenshot and the social preview again when the picture changes. The social preview is uploaded by hand (Settings, General).
 - After the release, the same workflow builds the web site (`make site`, the pages are in `site/`) and publishes it with GitHub Pages: the landing page at <https://ddecoene.github.io/raster-rumble/> and the play page at `/play/`. The play page opens the public emulator [vc64web](https://vc64web.github.io) with `#openROMS=true` (it installs the free open ROMs by itself), `#port2=true` (the keyboard is the joystick in port 2) and the address of the game on the site, `raster-rumble-vX.Y.Z.prg`. The version is in that name on purpose: vc64web keeps every file it ever loaded in the browser and never asks for it again, so a fixed name would keep showing an old build to anyone who played before. GitHub Pages lets other websites read its files (CORS), release files it does not. The emulator is vc64web (open source, based on VirtualC64); we only link to it. Why and how: `docs/design-landing-page.md`.
 - The workflow also still puts the newest `.prg` on the `play` branch, for the old "Play" link (vc64web with `raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg`) that is already out there. That link has the cache problem above; share the `/play/` link instead.
 - To look at the site before a release: `make site-serve` builds it for http://127.0.0.1:8001 and serves it there. The Play button does not work locally (vc64web turns `http://` into `https://`), the rest does.
@@ -116,6 +117,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     tools/serve.py        local server for the browser emulator (make test)
     tools/bot.js          dodging bot for test runs in the browser emulator
     tools/sound.mjs       exports the tracker project to src/sound (make sound)
+    tools/screenshots.sh  makes the title screenshot and the social preview with VICE (make screenshots)
     tools/version.sh      prints the version from src/version.asm (Makefile and workflows use it)
     site/                 the web site: the landing page and play/, the page that starts the newest version (make site)
     tools/site.sh         builds the site into build/site, with the version and the game filled in

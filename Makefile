@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all sound clean emu serve test stop version d64 dist vice site site-serve
+.PHONY: all sound screenshots clean emu serve test stop version d64 dist vice site site-serve
 
 all: $(OUT)
 
@@ -73,3 +73,7 @@ vice: $(OUT)
 WST ?= ../WebSidTracker
 sound:
 	node tools/sound.mjs "$(WST)"
+
+# the title screenshot and the social preview, made with VICE. Only needed when the picture changes
+screenshots: $(OUT)
+	tools/screenshots.sh
