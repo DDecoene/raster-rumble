@@ -1,6 +1,6 @@
 # Concept: the game as an interactive film
 
-> Notes from a brainstorm on 2026-11-23, **not finished**. Nothing here is built, and `docs/story.md` still holds the story as it is in the game now.
+> Notes from the brainstorm of 2026-11-23. The script that came out of it is in `docs/story.md` (first draft); where the two differ, the script counts.
 
 ## What we want
 
