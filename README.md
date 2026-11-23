@@ -4,7 +4,7 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 **Status: alpha.** Download the latest build from the [Releases page](https://github.com/DDecoene/raster-rumble/releases/latest): the `.prg` for an emulator, Kung Fu Flash or Ultimate, or the `.d64` disk image. Two of the six chapters of the story are playable so far, and the third (The Border) is under construction.
 
-**[▶ Play it now in your browser](https://vc64web.github.io/#openROMS=true#port2=true#https://raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg)** (nothing to install: arrow keys steer, Space is fire, any key starts. The first start takes a few seconds)
+**[▶ Play it now in your browser](https://ddecoene.github.io/raster-rumble/play/)** (nothing to install: arrow keys steer, Space is fire, any key starts. The first start takes a few seconds). This link always starts the newest version. The game's own page: <https://ddecoene.github.io/raster-rumble/>
 
 **Music and sound effects made with [WebSidTracker](https://github.com/DDecoene/WebSidTracker)**, a SID tracker that runs in the browser, with a small 6502 player for games (by the same author, made for this game). The tune and the effects are one tracker project, [`music/raster-rumble.json`](music/raster-rumble.json): load it in the [online tracker](https://ddecoene.github.io/WebSidTracker/tracker.html) (Open) to hear it, see it and change it. How the game uses it: [Sound](#sound).
 
@@ -33,6 +33,7 @@ A title screen waits for a key (or the joystick) before the game starts. You fly
     make        # assembles build/raster-rumble.prg
     make test   # builds, then runs it in the browser emulator (see below)
     make vice   # builds, then runs it in VICE (x64sc, the accurate emulator, with a 6581 SID: use it to judge the sound; brew install vice)
+    make site   # the web site in build/site (make site-serve shows it on http://127.0.0.1:8001)
     make clean
 
 Controls: joystick in port 2. In the browser emulator (`make test`) the arrow keys are the joystick (port 2), and Space is fire.
@@ -79,11 +80,15 @@ The latest build is always on the [Releases page](https://github.com/DDecoene/ra
 How it works:
 
 - The version lives in `src/version.asm` (`!scr "v0.0.6"`) and is shown on the title screen. `make version` prints it.
-- `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or that does not build.
+- `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or whose game or web site does not build.
 - When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
 - So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
-- The same workflow puts the newest `.prg` on the `play` branch (one commit, replaced on every release). That is what the "Play it now" button loads: GitHub does not let other websites read release files (no CORS), but it does for `raw.githubusercontent.com`. The button opens the public emulator [vc64web](https://vc64web.github.io) with `#openROMS=true` (it installs the free open ROMs by itself), `#port2=true` (the keyboard is the joystick in port 2) and the address of the game. The emulator is vc64web (open source, based on VirtualC64); we only link to it. Until the first release made after this was added, the button has nothing to load.
+- After the release, the same workflow builds the web site (`make site`, the pages are in `site/`) and publishes it with GitHub Pages: the landing page at <https://ddecoene.github.io/raster-rumble/> and the play page at `/play/`. The play page opens the public emulator [vc64web](https://vc64web.github.io) with `#openROMS=true` (it installs the free open ROMs by itself), `#port2=true` (the keyboard is the joystick in port 2) and the address of the game on the site, `raster-rumble-vX.Y.Z.prg`. The version is in that name on purpose: vc64web keeps every file it ever loaded in the browser and never asks for it again, so a fixed name would keep showing an old build to anyone who played before. GitHub Pages lets other websites read its files (CORS), release files it does not. The emulator is vc64web (open source, based on VirtualC64); we only link to it. Why and how: `docs/design-landing-page.md`.
+- The workflow also still puts the newest `.prg` on the `play` branch, for the old "Play" link (vc64web with `raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg`) that is already out there. That link has the cache problem above; share the `/play/` link instead.
+- To look at the site before a release: `make site-serve` builds it for http://127.0.0.1:8001 and serves it there. The Play button does not work locally (vc64web turns `http://` into `https://`), the rest does.
 - `make d64` and `make dist` (the release files in `build/dist`) do the same locally. They need `c1541`: `brew install vice`.
+
+One-time GitHub setup for the site: Settings, Pages, Source "GitHub Actions".
 
 One-time GitHub setup (Settings, Branches, rule for `main`): require a pull request before merging, require the status check `check` (the job of `pr-check.yml`), and include administrators, so nobody can push to `main` directly.
 
@@ -110,6 +115,9 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     tools/serve.py        local server for the browser emulator (make test)
     tools/bot.js          dodging bot for test runs in the browser emulator
     tools/version.sh      prints the version from src/version.asm (Makefile and workflows use it)
+    site/                 the web site: the landing page and play/, the page that starts the newest version (make site)
+    tools/site.sh         builds the site into build/site, with the version and the game filled in
+    tools/site-serve.py   serves build/site on http://127.0.0.1:8001 (make site-serve)
     .github/workflows/    pr-check.yml checks pull requests to main, release.yml builds and publishes a release
     project-config.json   VS64 project settings (toolkit: acme)
     .vscode/              build task, test task, launch config
