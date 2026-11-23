@@ -34,6 +34,7 @@ A title screen waits for a key (or the joystick) before the game starts. You fly
     make test   # builds, then runs it in the browser emulator (see below)
     make vice   # builds, then runs it in VICE (x64sc, the accurate emulator, with a 6581 SID: use it to judge the sound; brew install vice)
     make site   # the web site in build/site (make site-serve shows it on http://127.0.0.1:8001)
+    make sound  # exports the tracker project in music/ to src/sound (see Sound)
     make clean
 
 Controls: joystick in port 2. In the browser emulator (`make test`) the arrow keys are the joystick (port 2), and Space is fire.
@@ -114,6 +115,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     src/sprites.asm       the ship and enemy shapes at $2000
     tools/serve.py        local server for the browser emulator (make test)
     tools/bot.js          dodging bot for test runs in the browser emulator
+    tools/sound.mjs       exports the tracker project to src/sound (make sound)
     tools/version.sh      prints the version from src/version.asm (Makefile and workflows use it)
     site/                 the web site: the landing page and play/, the page that starts the newest version (make site)
     tools/site.sh         builds the site into build/site, with the version and the game filled in
@@ -190,7 +192,7 @@ Note: in an emulator the title used to start by itself, and a joystick direction
 
 All sound comes from the player of [WebSidTracker](https://github.com/DDecoene/WebSidTracker), a SID tracker in the browser. The game writes nothing to the SID itself.
 
-- **The project.** `music/raster-rumble.json` holds the tune and the sound effects. Open it in the tracker (Open), change it while it plays, Save it back, then Export and put `instruments.asm`, `sfx.asm` and `song_raster_rumble.asm` in `src/sound/`; `make vice` builds and runs the game with them. `src/sound/README.md` has the details and the licence (those files are MIT, the rest of the game CC BY-NC-SA).
+- **The project.** `music/raster-rumble.json` holds the tune and the sound effects. Open it in the tracker (Open), change it while it plays, Save it back (as `raster-rumble.json`, or as the `raster_rumble.json` the tracker proposes), then `make sound` exports it to `src/sound/` (it needs node and WebSidTracker next to this folder, or `WST=folder`); `make vice` builds and runs the game with them. `src/sound/README.md` has the details and the licence (those files are MIT, the rest of the game CC BY-NC-SA).
 - **The tune** is dark and industrial, made for the 6581 SID: 125 BPM (speed 1, 6 frames a sixteenth, 96 a bar), 12 bars that loop (about 23 seconds). Voice 1 a gritty pulse bass in sixteenths that jumps an octave (A, A, B flat, G); voice 2 a cold lead, a triangle ring-modulated by the bass (so its metal colour changes with every bass note), with a late vibrato, silent for the first 4 bars; voice 3 the kick (four on the floor), a metal hat and, after the intro, a snare.
 - **The player** starts the tune once (`music_init` in `main.asm`) and runs once per frame through `update_music` (`src/sound.asm`): in the game at the end of `game_bars`, below the plasma; on the title, game over and chapter screens after the raster bars. After `music_play`, `update_music` looks at the player's state of voice 3 (`st_age`, `st_instr`): when a note of the kick (`SND_KICK`, instrument 2 of the project) starts, the raster bars are pushed on, so they pump with the beat.
 - **Sound effects** borrow a voice; the music of that voice keeps time and comes back at its next note. A dodge plays `SFX_DODGE` on voice 3 (`score_point` in `score.asm`), a new chapter `SFX_CHAPTER` on voice 3 (`chapter_screen`), a hit `SFX_HIT` on voice 3 and `SFX_HIT_BODY` on voice 1 at the same time (the hit code in `main.asm`), so the lead on voice 2 always goes on.

@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all clean emu serve test stop version d64 dist vice site site-serve
+.PHONY: all sound clean emu serve test stop version d64 dist vice site site-serve
 
 all: $(OUT)
 
@@ -68,3 +68,8 @@ clean:
 # -sidenginemodel 256 is reSID with the MOS 6581, the chip the music is composed for (whatever VICE's own setting is).
 vice: $(OUT)
 	x64sc -addconfig tools/vice-joystick.rc -sidenginemodel 256 -autostart $(OUT)
+
+# export the tracker project in music/ to src/sound (WST is the folder of WebSidTracker; needs node)
+WST ?= ../WebSidTracker
+sound:
+	node tools/sound.mjs "$(WST)"
