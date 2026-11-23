@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all sound screenshots release clean emu serve test stop version d64 dist vice site site-serve
+.PHONY: all intro intro-art sound screenshots release clean emu serve test stop version d64 dist vice site site-serve
 
 all: $(OUT)
 
@@ -84,3 +84,18 @@ release: export V := $(V)
 release: export DRY := $(DRY)
 release:
 	@tools/release.sh
+
+# the intro of the film, a program of its own for now: build it and show it in VICE
+build/intro.prg: src/intro/intro.asm src/intro/room.bin src/hardware.asm
+	@mkdir -p build
+	acme -f cbm --cpu 6510 -l build/intro.lbl -o $@ src/intro/intro.asm
+
+intro: build/intro.prg
+	x64sc -addconfig tools/vice-joystick.rc -sidenginemodel 256 -autostartprgmode 1 -autostart build/intro.prg
+
+# draw the picture of the intro again (only after a change in tools/intro-room.py)
+intro-art:
+	@mkdir -p build
+	@[ -x build/venv/bin/python ] || python3 -m venv build/venv
+	@build/venv/bin/python -c 'import PIL, numpy' 2>/dev/null || build/venv/bin/pip -q --disable-pip-version-check install pillow numpy
+	build/venv/bin/python tools/intro-room.py
