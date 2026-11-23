@@ -241,7 +241,7 @@ def clock_face(clock):
     return face
 
 
-def fit(picture):
+def fit(picture, clock=True):
     """per cell the two colours that come closest, and the pixels (an ordered dither between the two)"""
     bits = np.zeros((H, W), bool)
     pairs = np.zeros((25, 40, 2), int)
@@ -261,7 +261,8 @@ def fit(picture):
             _, a, b, on = best
             bits[r * 8:r * 8 + 8, c * 8:c * 8 + 8] = on
             pairs[r, c] = a, b
-    bits[104:112, 264:296] = False          # the clock: the program puts the figures there
+    if clock:
+        bits[104:112, 264:296] = False      # the clock: the program puts the figures there
     return bits, pairs
 
 

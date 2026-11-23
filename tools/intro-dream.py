@@ -83,6 +83,7 @@ def halo(radius, power):
 
 sprite(10, halo(15, .8))
 sprite(11, halo(11, 1.2))
+sprite(12, lambda d: d.rectangle((0, 0, 23, 1), fill=1))       # the beam of the title: eight of these in a row
 
 rnd = random.Random(23)
 N = 48

@@ -31,7 +31,7 @@ The mistake was one character. The game he fixes is this one.
 - Nobody dies. `LIVES` is `COURAGE`. `GAME OVER` is `THE NIGHT STARTS OVER`.
 - The clock is always on screen. It is how far you are from morning.
 - One new thing per chapter. Every power is learned in the same three steps: it **scares** you, you **see how it works**, you **use** it.
-- Fire skips every scene.
+- Fire skips every scene. The first fire on the title starts the story, so nobody misses it.
 
 ## Intro (about 30 seconds)
 
@@ -57,7 +57,7 @@ The door closes. The figure is in the bed. The monitor still glows.
 
 > Hold on until morning.
 
-**Shot 5. The title.** The line of light passes from top to bottom and draws the letters `RASTER RUMBLE` as it goes. This is the Beam. Nobody knows that yet. Then: `PRESS FIRE`.
+**The title** comes before and after the intro, as on an arcade machine: title, intro, title, and so on. It is a film poster: night, a house on a hill, and one attic window that glows. A line of light passes from top to bottom and draws it. This is the Beam. Nobody knows that yet. `Fire to begin` starts the story the first time, and the game after that. In the story fire starts the game.
 
 ## 23:00 The Screen
 

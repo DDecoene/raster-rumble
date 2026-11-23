@@ -1,5 +1,5 @@
 ; intro.asm - the intro of the film, shot by shot (see docs/story.md). A program of its own, the game is not in it.
-; For now: shots 1 to 4. They play and start again.
+; The title, then the shots, then the title again; fire starts the game (for now: 23:00 on the clock, then the title).
 ; The picture is made by tools/intro-room.py. All seven colour screens are in memory at the same time, so the light
 ; changes by pointing the VIC at another screen: one write to VIC_MEMCTL.
 
@@ -44,12 +44,18 @@ nod       = $07                     ; frames the head stays one line lower
 rnd       = $08                     ; random number
 look      = $09                     ; how far the head is turned to the magazine, in pixels
 random_light = $0a                  ; frames left of a flicker
-shot      = $0b                     ; 0 = shot 1, 1 = shot 2, 2 = the door, 3 = the bed (both shot 3), 4 = the clock and the eyelids, 5 = the dream (both shot 4)
+shot      = $0b                     ; 0 = shot 1, 1 = shot 2, 2 = the door, 3 = the bed (both shot 3), 4 = the clock and the eyelids, 5 = the dream (both shot 4), 6 = the title, 7 = the game starts
 sink      = $0c                     ; how far the head hangs down, in lines
 beat      = $0d                     ; frame / 4 (not in shot 1)
 lid       = $11                     ; how far the eye is open: raster lines above and below MIDDLE
 slit      = $12                     ; the background colour between the eyelids
 star      = $13                     ; the first star of this frame: half of them move in a frame
+fire      = $14                     ; 1 = fire was down in the last frame
+beam_y    = $15                     ; the raster line of the beam
+beam_row  = $16                     ; the title: which of its rows the beam lights
+drawn     = $17                     ; 1 = the beam has drawn the title
+TITLE     = $9000                   ; title.bin, packed; unpacked to $d000
+seen      = $18                     ; 1 = the story has begun once: from now on fire on the title starts the game
 in_bed    = $0e                     ; 1 = the cells of bed.bin are in the picture
 cell      = $0f                     ; number of a cell, 2 bytes
 from      = $fb                     ; pointers, 2 bytes each
@@ -82,13 +88,26 @@ start
         sta VIC_CTRL2               ; 40 columns, one colour per pixel
 
         lda #0
-        sta shot
         sta in_bed
+        sta seen
         sta star
+        sta CIA1_DDRA               ; port A inputs: the joystick
+        sta CIA1_DDRB
+        lda #1
+        sta fire                    ; a button that is still down does not count
+        lda #6
+        sta shot
+        lda #0
         sta SPR2_COLOR              ; sprites 2 and 3: the head, black
         sta SPR2_COLOR + 1
 
 new_shot                            ; everything to the start of the shot in the variable 'shot'
+        lda shot
+        bne +
+        inc seen                    ; the story begins
+        bne +
+        inc seen                    ; (never 0 again)
++
         lda #0
         ldy shot
         cpy #2                      ; the door opens in the same room: no cut, the hum goes on
@@ -142,9 +161,16 @@ new_shot                            ; everything to the start of the shot in the
         sta lid
         lda shot
         cmp #5
+        bcc ++
         bne +
         jmp start_dream             ; no room, no hum
-+       jsr load_text
++       cmp #6
+        bne +
+        jsr start_title
+        jmp hum
++       jsr empty_dream             ; the game starts
+        jmp loop
+++      jsr load_text
         lda #0                      ; must he be in bed in this shot?
         ldx shot
         cpx #3
@@ -156,7 +182,7 @@ new_shot                            ; everything to the start of the shot in the
         jsr swap_bed
 +
 
-        ; the hum: two low voices through the low-pass filter. 852 = 50 Hz, 1710 = just above 100 Hz
+hum     ; the hum: two low voices through the low-pass filter. 852 = 50 Hz, 1710 = just above 100 Hz
         lda #<852
         sta SID_FREQ1L
         lda #>852
@@ -184,7 +210,34 @@ loop
 -       lda VIC_RASTER              ; wait for line 251, below the picture
         cmp #251
         bne -
+        lda CIA1_PORTA              ; fire? 0 = down
+        and #$10
+        bne .up
+        lda fire
+        bne .held
+        inc fire
         lda shot
+        cmp #7                      ; the game starts already
+        beq .held
+        cmp #6
+        bne .intro
+        lda seen                    ; the title: the first time fire starts the story, after that the game
+        bne .game
+        sta shot
+        jmp new_shot
+.intro  cmp #0                      ; in the story fire starts the game, but not in the first 2 seconds: a second
+        bne .game                   ; press by accident may not skip it
+        lda frame + 1
+        bne .game
+        lda frame
+        cmp #100
+        bcc .held
+.game   lda #7
+        sta shot
+        jmp new_shot
+.up     lda #0
+        sta fire
+.held   lda shot
         cmp #4
         bcc +
         jsr play_late               ; the last two shots show their own pictures
@@ -238,12 +291,8 @@ loop
         cmp shot_end_hi,x
         bne +
         lda shot                    ; the next shot, and the first one after the last
-        clc
-        adc #1
-        cmp #6
-        bcc .shot_ok
-        lda #0
-.shot_ok
+        tax
+        lda shot_next,x
         sta shot
         jmp new_shot
 +       lda VIC_RASTER              ; the work can be done within one line: do not run twice on line 251
@@ -251,8 +300,9 @@ loop
         beq -
         jmp loop
 
-shot_end_lo !byte <700, <800, <560, <480, <560, <1000   ; frames, 50 in a second
-shot_end_hi !byte >700, >800, >560, >480, >560, >1000
+shot_end_lo !byte <700, <800, <560, <480, <560, <1000, <1000, <220   ; frames, 50 in a second
+shot_end_hi !byte >700, >800, >560, >480, >560, >1000, >1000, >220
+shot_next   !byte 1, 2, 3, 4, 5, 6, 0, 6
 
 !zone load_text
 load_text                           ; subroutine: put the sentences and the time of this shot in the bitmap
@@ -521,8 +571,13 @@ play_late                           ; subroutine: one frame of the clock, the ey
         lda shot
         cmp #5
         beq +
+        bcs ++
         jmp play4
 +       jmp play5
+++      cmp #6
+        bne +
+        jmp play_title
++       jmp play_go
 
 show_dream                          ; subroutine: the VIC sees the dream, as characters
         lda CIA2_PORTA
@@ -584,7 +639,7 @@ big_clock                           ; subroutine: five large sprites show the ti
         sta SPR_XHI
         lda shot                    ; in the dream the clock is below the line of light
         cmp #5
-        bne +
+        bcc +
         lda #158
         sta SPR0_Y
         sta SPR1_Y
@@ -602,6 +657,298 @@ big_clock                           ; subroutine: five large sprites show the ti
 
 clock_digit !byte 17, 17, 21, 19, 20, 17, 18, 21, 16, 16
 clock_place !byte 74, 116, 118, 116, 161, 116, 203, 116, 247, 116
+
+!zone title
+start_title                         ; subroutine: unpack the poster to $d000 and make the beam
+        lda #<TITLE
+        sta from
+        lda #>TITLE
+        sta from + 1
+        lda #$00
+        sta to
+        lda #$d0
+        sta to + 1
+        lda #$34                    ; all RAM: no ROM and no chips (the sprites and the sound just go on)
+        sta CPU_PORT
+.next   ldy #0
+        lda (from),y
+        beq .end
+        tax                         ; how many
+        inc from
+        bne +
+        inc from + 1
++       txa
+        bmi .copy
+-       lda (from),y                ; bytes as they are
+        sta (to),y
+        iny
+        dex
+        bne -
+        tya                         ; both pointers move on, Y = how far
+        clc
+        adc from
+        sta from
+        bcc +
+        inc from + 1
++       tya
+        jsr .on
+        jmp .next
+.copy   sec                         ; bytes that were there before
+        sbc #125
+        tax
+        sec                         ; cell = to - distance
+        lda to
+        sbc (from),y
+        sta cell
+        iny
+        lda to + 1
+        sbc (from),y
+        sta cell + 1
+        lda from
+        clc
+        adc #2
+        sta from
+        bcc +
+        inc from + 1
++       ldy #0
+-       lda (cell),y
+        sta (to),y
+        iny
+        dex
+        bne -
+        tya
+        jsr .on
+        jmp .next
+.on     clc
+        adc to
+        sta to
+        bcc +
+        inc to + 1
++       rts
+.end    lda #$37                    ; everything back
+        sta CPU_PORT
+        ldx #7                      ; the beam: eight white sprites in a row, twice as wide
+-       lda #1
+        sta SPR0_COLOR,x
+        dex
+        bpl -
+        ldx #14
+        ldy #7
+-       lda beam_x,y
+        sta SPR0_X,x
+        dex
+        dex
+        dey
+        bpl -
+        lda #$e0                    ; the last three are past 255
+        sta SPR_XHI
+        lda #$ff
+        sta $d01d
+        lda #0
+        sta drawn
+        sta random_light
+        lda #56                     ; (lines below 56 also exist at the bottom of the frame, to the VIC_RASTER byte)
+        sta beam_y
+        lda #$ff
+        sta beam_row
+        rts
+beam_x  !byte 24, 72, 120, 168, 216, <264, <312, <312
+
+; The beam draws the poster from top to bottom; every now and then it comes by again.
+play_title                          ; subroutine: one frame of the title
+        lda CIA2_PORTA
+        and #$fc
+        sta CIA2_PORTA
+        lda #$08
+        sta VIC_CTRL2
+        lda #$3b
+        sta VIC_CTRL1
+        lda #$10 + HUM - 2
+        sta SID_VOLUME
+        ldx #$48                    ; colours at $d000, bitmap at $e000
+        lda random_light            ; the light in the window flickers
+        beq +
+        dec random_light
+        ldx #$58                    ; colours at $d400
+        bne ++
++       jsr random
+        cmp #8
+        bcs ++
+        and #3
+        sta random_light
+++      stx VIC_MEMCTL
+        lda beam_y
+        beq .rest
+        clc
+        adc #2
+        cmp #246
+        bcs .there
+        sta beam_y
+        lda #$ff                    ; it sings while it moves: lower and lower
+        sec
+        sbc beam_y
+        lsr
+        lsr
+        lsr
+        adc #7
+        sta SID_FREQ3H
+        lda #$40
+        sta SID_SR3
+        lda #$a5
+        sta SID_AD3
+        lda #$11
+        sta SID_CTRL3
+        bne .light
+.there  lda #1
+        sta drawn
+        lda #0                      ; 0 = no beam
+        sta beam_y
+        lda #$10                    ; quiet
+        sta SID_CTRL3
+        bne .light
+.rest   lda frame                   ; about every 5 seconds it starts again at the top
+        bne .light
+        lda #50
+        sta beam_y
+.light  ldx #0
+        lda beam_y
+        beq +
+        ldx #$ff
+        ldy #14
+-       sta SPR0_Y,y
+        dey
+        dey
+        bpl -
++       stx SPR_ENABLE
+        lda #$34                    ; the colours are under the chips
+        sta CPU_PORT
+        jsr light_row
+        lda drawn                   ; "Fire to begin" glows up and down
+        beq ++
+        lda frame
+        lsr
+        lsr
+        lsr
+        and #15
+        tax
+        lda glow,x
+        ldx #12
+-       sta $d000 + 19 * 40 + 13,x
+        sta $d000 + 20 * 40 + 13,x
+        sta $d400 + 19 * 40 + 13,x
+        sta $d400 + 20 * 40 + 13,x
+        dex
+        bpl -
+++      lda #$37
+        sta CPU_PORT
+        lda drawn
+        bne +
+        lda beam_y                  ; below the beam it is still black, the first time
+        clc
+        adc #2
+        ldx #$7b
+-       cmp VIC_RASTER
+        bne -
+        stx VIC_CTRL1
++       rts
+
+light_row                           ; subroutine: the row of the title where the beam is, is white
+        lda beam_y
+        sec
+        sbc #50
+        lsr
+        lsr
+        lsr                         ; the row of characters
+        cmp beam_row
+        beq .same
+        pha
+        ldx beam_row                ; the old row gets its own colour back
+        jsr .in_title
+        bcs +
+        jsr .paint
++       pla
+        sta beam_row
+        tax
+        jsr .in_title
+        bcs .same
+        lda #$10
+        jmp .paint
+.in_title                           ; X = row, A = its own colour. Carry set: not a row of the title
+        cpx #9
+        bcs .no
+        lda title_color,x
+        beq .no
+        clc
+        rts
+.no     sec
+.same   rts
+.paint  ldy row_lo,x                ; A = colour, X = row
+        sty to
+        pha
+        lda row_hi,x
+        clc
+        adc #$d0 - >DREAM
+        sta to + 1
+        pla
+        jsr +                       ; in both colour screens
+        tax
+        lda to + 1
+        clc
+        adc #4
+        sta to + 1
+        txa
++       ldy #35                     ; columns 4 to 35: the letters
+-       sta (to),y
+        dey
+        cpy #3
+        bne -
+        rts
+title_color !byte 0, 0, $10, $30, $e0, 0, $10, $30, $e0
+glow        !byte $b0, $b0, $c0, $c0, $f0, $f0, $10, $10, $10, $10, $f0, $f0, $c0, $c0, $b0, $b0
+
+!zone go
+; Fire: everything is black, the beam falls from top to bottom, and the clock says 23:00. The game will start here.
+play_go                             ; subroutine: one frame of the start of the game
+        jsr show_dream
+        lda #$5b
+        sta VIC_CTRL1
+        lda frame
+        cmp #60
+        bcs .clock
+        cmp #1                      ; a stroke
+        bne +
+        lda #$1f
+        sta SID_VOLUME
+        lda #$04
+        sta SID_FREQ1H
+        lda #$0a
+        sta SID_AD1
+        lda #$11
+        sta SID_CTRL1
++       lda frame                   ; the beam: three lines lower every frame
+        asl
+        adc frame
+        adc #52
+        sta to
+        ldx #1
+        stx VIC_BG
+        ldx #$1b
+        ldy #$5b
+        lda to
+-       cmp VIC_RASTER
+        bne -
+        stx VIC_CTRL1
+        clc
+        adc #2
+-       cmp VIC_RASTER
+        bne -
+        sty VIC_CTRL1
+        rts
+.clock  cmp #90
+        bcc +
+        ldx #5
+        jmp big_clock
++       rts
 
 !zone play4
 ; In beats: 0 the large clock; 44 the room; 56 the eyes close, 80 open a little, 94 close; 140 the end
@@ -691,6 +1038,10 @@ play4                               ; subroutine: one frame of the clock and the
 
 !zone dream
 start_dream                         ; everything to the start of the dream
+        jsr empty_dream
+        jmp .chord
+
+empty_dream                         ; subroutine: the screen of the dream empty
         ldx #0                      ; an empty screen, white letters
 -       lda #0
         sta DREAM,x
@@ -711,7 +1062,9 @@ start_dream                         ; everything to the start of the dream
         sta old_hi,x
         dex
         bpl -
-        lda #$07                    ; the chord of the dream: three soft triangles that swell slowly, G, D and B
+        rts
+
+.chord  lda #$07                    ; the chord of the dream: three soft triangles that swell slowly, G, D and B
         sta SID_RES
         lda #$40
         sta SID_FC_HI
@@ -1400,6 +1753,10 @@ text_wait                           ; frames after every letter of "He typed it 
         * = ROOM
         !bin "src/intro/room.bin"
         * = DOOR
-        !bin "src/intro/door.bin"
+        !bin "src/intro/door.bin", $1000
+        * = TITLE                   ; in the gap in door.bin, between its sprites and its bitmap
+        !bin "src/intro/title.bin"
+        * = DOOR + $2000
+        !bin "src/intro/door.bin", , $2000
         * = DREAM
         !bin "src/intro/dream.bin"
