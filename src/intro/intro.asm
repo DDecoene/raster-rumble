@@ -127,7 +127,11 @@ new_shot                            ; everything to the start of the shot in the
         bpl -
         sta light
         sta sink
+        cpy #4                      ; the large clock shows a little shorter: start further on
+        bne .go_on
+        lda #64
 .go_on  sta frame
+        lda #0
         sta frame + 1
         sta typed
         sta nod
@@ -306,8 +310,8 @@ loop
         beq -
         jmp loop
 
-shot_end_lo !byte <700, <800, <560, <480, <560, <1000, <1000, <220, <432   ; frames, 50 in a second
-shot_end_hi !byte >700, >800, >560, >480, >560, >1000, >1000, >220, >432
+shot_end_lo !byte <568, <688, <560, <300, <560, <944, <1000, <220, <432   ; frames, 50 in a second
+shot_end_hi !byte >568, >688, >560, >300, >560, >944, >1000, >220, >432
 shot_next   !byte 1, 2, 3, 4, 8, 6, 0, 6, 5
 
 !zone load_text
@@ -556,7 +560,7 @@ play_bed                            ; subroutine: one frame of the bed: dark, th
         inx
         cmp #14
         bcc .set
-        cmp #100
+        cmp #56 
         bcs .set
         jsr steady
         jmp .hum
@@ -1744,12 +1748,12 @@ fade_hum2 !byte 1, 3, 4, 5, HUM, HUM
 !zone fade
 fade                                ; subroutine: the light and the hum come up, flicker, and go down at the end
         lda frame + 1
-        bne .full                   ; after 256 frames: full light
+        bne .full
         lda frame
+        bmi .flicker                ; after 128 frames: full light
         lsr
         lsr
-        lsr
-        lsr                         ; frame / 16 = 0 to 15
+        lsr                         ; frame / 8 = 0 to 15
         tax
         lda fade_light,x
         sta light
@@ -1757,14 +1761,9 @@ fade                                ; subroutine: the light and the hum come up,
         ora #$10                    ; low-pass filter on
         sta SID_VOLUME
         rts
-.full
-        cmp #>700                   ; the last part of the shot?
-        bne .flicker
-        lda frame
-        cmp #<640
+.full   cmp #2                      ; from frame 512: the light goes out
         bcc .flicker
-        sec
-        sbc #<640
+        lda frame
         lsr
         lsr
         lsr                         ; 0 to 7
@@ -1795,7 +1794,11 @@ steady                              ; subroutine: full light, with a flicker now
 !zone type
 type                                ; subroutine: the next letter, with the tick of a key
         lda frame + 1
-        beq .done                   ; first 256 frames: no typing yet
+        bne +
+        lda frame
+        cmp #144                    ; no typing yet
+        bcc .done
++
         lda typed
         cmp #TEXT_LEN
         bcs .done
