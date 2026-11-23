@@ -4,6 +4,8 @@ room.bin is loaded at $4000:
   $4000  seven colour screens of 1 KB: 0 = dark ... 5 = full light, 6 = full light with a flicker
   $5c00  sprites (the head of the boy: black shape, rim of light), then empty
   $6000  the hires bitmap
+text.bin is loaded at $8000, $600 bytes per shot: four rows of bitmap with the sentences (1280 bytes), then the
+three cells of the clock (24 bytes).
 One pixel holds a brightness from 0 to 4: a place on the ramp black, blue, light blue, cyan, white.
 """
 import sys
@@ -139,10 +141,52 @@ FONT = {
     'v': '...... ...... ...... x....x x....x x....x .x..x. .x..x. ..xx.. ..xx..',
     'r': '...... ...... ...... x.xxx. xx...x x..... x..... x..... x..... x.....',
     'l': '.xx... ..x... ..x... ..x... ..x... ..x... ..x... ..x... ..x... .xxx..',
+    'I': '.xxx.. ..x... ..x... ..x... ..x... ..x... ..x... ..x... ..x... .xxx..',
+    's': '...... ...... ...... .xxxx. x....x x..... .xxxx. .....x x....x .xxxx.',
+    'o': '...... ...... ...... .xxxx. x....x x....x x....x x....x x....x .xxxx.',
+    'w': '...... ...... ...... x....x x....x x....x x.xx.x x.xx.x xx..xx x....x',
+    'k': 'x..... x..... x..... x...x. x..x.. x.x... xxx... x..x.. x...x. x....x',
+    'h': 'x..... x..... x..... xxxxx. x....x x....x x....x x....x x....x x....x',
     '.': '...... ...... ...... ...... ...... ...... ...... ...... .xx... .xx...',
 }
-TEXT = 'He typed it in. Every line.'
-TEXT_ROW, TEXT_COL = 22, (40 - len(TEXT)) // 2
+# per shot: the time on the clock, then the sentences with their row (21 to 23) in the bar below the picture
+SHOTS = [
+    ('22:41', [(22, 'He typed it in. Every line.')]),
+    ('22:52', [(21, 'It does not work.'), (23, 'He does not know why.')]),
+]
+
+
+def cells(bits):
+    """8 x 8 cells, the order the VIC wants"""
+    out = bytearray()
+    for r in range(bits.shape[0] // 8):
+        for c in range(bits.shape[1] // 8):
+            out += np.packbits(bits[r * 8:r * 8 + 8, c * 8:c * 8 + 8], axis=1).tobytes()
+    return out
+
+
+def texts():
+    digits = {'2': '110 001 010 100 111', '4': '101 101 111 001 001', '1': '010 110 010 010 111',
+              '5': '111 100 110 001 110', ':': '0 1 0 1 0'}
+    data = bytearray()
+    for clock, lines in SHOTS:
+        bar = np.zeros((32, W), bool)
+        for row, text in lines:
+            col = (40 - len(text)) // 2
+            for i, ch in enumerate(text):
+                for y, line in enumerate(FONT[ch].split() if ch != ' ' else ()):
+                    for x, p in enumerate(line):
+                        bar[(row - 21) * 8 + 2 + y, (col + i) * 8 + 1 + x] = p == 'x'
+        face = np.zeros((8, 24), bool)
+        x = 3
+        for ch in clock:
+            rows = digits[ch].split()
+            for y, line in enumerate(rows):
+                for i, p in enumerate(line):
+                    face[2 + y, x + i] = p == '1'
+            x += len(rows[0]) + 1
+        data += (cells(bar) + cells(face)).ljust(0x600, b'\0')
+    return bytes(data)
 
 
 def build():
@@ -164,20 +208,7 @@ def build():
             _, a, b, on = best
             bits[r * 8:r * 8 + 8, c * 8:c * 8 + 8] = on
             pairs[r, c] = a, b
-    for i, ch in enumerate(TEXT):
-        for y, line in enumerate(FONT.get(ch, '').split()):
-            for x, p in enumerate(line):
-                bits[TEXT_ROW * 8 + 2 + y, (TEXT_COL + i) * 8 + 1 + x] = p == 'x'
-    # the clock: red figures, 22:41, in cells of their own
-    digits = {'2': '110 001 010 100 111', '4': '101 101 111 001 001', '1': '010 110 010 010 111', ':': '0 1 0 1 0'}
-    bits[104:112, 264:296] = False
-    x = 267
-    for ch in '22:41':
-        rows = digits[ch].split()
-        for y, line in enumerate(rows):
-            for i, p in enumerate(line):
-                bits[106 + y, x + i] = p == '1'
-        x += len(rows[0]) + 1
+    bits[104:112, 264:296] = False          # the clock: the program puts the figures there
     clock = {(13, c) for c in (33, 34, 35)}
     screens = bytearray()
     for level in (0, 1, 2, 3, 4, 5, 6):
@@ -219,11 +250,9 @@ def build():
     for part in (rimh[:21], rimh[21:], h[:21], h[21:]):
         sprites += np.packbits(part, axis=1).tobytes() + b'\0'
     sprites = sprites.ljust(0x400, b'\0')
-    bitmap = bytearray()
-    for r in range(25):
-        for c in range(40):
-            bitmap += np.packbits(bits[r * 8:r * 8 + 8, c * 8:c * 8 + 8], axis=1).tobytes()
+    bitmap = cells(bits)
     return bytes(screens + sprites + bitmap)
 
 
 open('src/intro/room.bin', 'wb').write(build())
+open('src/intro/text.bin', 'wb').write(texts())

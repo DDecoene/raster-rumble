@@ -86,7 +86,7 @@ release:
 	@tools/release.sh
 
 # the intro of the film, a program of its own for now: build it and show it in VICE
-build/intro.prg: src/intro/intro.asm src/intro/room.bin src/hardware.asm
+build/intro.prg: src/intro/intro.asm src/intro/room.bin src/intro/text.bin src/hardware.asm
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/intro.lbl -o $@ src/intro/intro.asm
 

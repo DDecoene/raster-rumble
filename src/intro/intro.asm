@@ -1,5 +1,5 @@
 ; intro.asm - the intro of the film, shot by shot (see docs/story.md). A program of its own, the game is not in it.
-; For now: shot 1. It plays and starts again.
+; For now: shots 1 and 2. They play and start again.
 ; The picture is made by tools/intro-room.py. All seven colour screens are in memory at the same time, so the light
 ; changes by pointing the VIC at another screen: one write to VIC_MEMCTL.
 
@@ -18,7 +18,15 @@ ROOM      = $4000                   ; room.bin: seven colour screens, the sprite
 HEAD_X    = 180                     ; where the head is (sprite coordinates)
 HEAD_Y    = 146
 TEXT_LEN  = 27                      ; the letters of the sentence
-TEXT_POS  = 22 * 40 + 6             ; the first letter: row 22, column 6
+BAR       = 21 * 40                 ; the first character row of the bar below the picture
+TEXT1     = 40 + 6                  ; shot 1: where the sentence starts, counted from BAR: row 22, column 6
+TEXT2A    = 11                      ; shot 2: "It does not work.", row 21, column 11
+TEXT2B    = 80 + 9                  ; shot 2: "He does not know why.", row 23, column 9
+LEN2A     = 17                      ; their letters
+LEN2B     = 21
+TEXTS     = $8000                   ; text.bin: $600 bytes per shot
+BAR_BITS  = $6000 + 21 * 320        ; the bar in the bitmap
+CLOCK_BITS = $6000 + 13 * 320 + 33 * 8 ; the figures of the clock in the bitmap
 HUM       = 5                       ; the loudest the hum gets (0-15)
 
 frame     = $02                     ; frames since the shot began, 2 bytes
@@ -29,6 +37,11 @@ nod       = $07                     ; frames the head stays one line lower
 rnd       = $08                     ; random number
 look      = $09                     ; how far the head is turned to the magazine, in pixels
 random_light = $0a                  ; frames left of a flicker
+shot      = $0b                     ; 0 = shot 1, 1 = shot 2
+sink      = $0c                     ; how far the head hangs down, in lines
+beat      = $0d                     ; shot 2: frame / 4
+from      = $fb                     ; pointers, 2 bytes each
+to        = $fd
 
         * = $0810
 start
@@ -56,7 +69,14 @@ start
         lda #$08
         sta VIC_CTRL2               ; 40 columns, one colour per pixel
 
-shot1                               ; everything to the start of the shot
+        lda #0
+        sta shot
+        sta SPR2_COLOR              ; sprites 2 and 3: the head, black
+        sta SPR2_COLOR + 1
+
+new_shot                            ; everything to the start of the shot in the variable 'shot'
+        lda #$08                    ; colour screen 0: black. A cut
+        sta VIC_MEMCTL
         ldx #24                     ; the SID silent
         lda #0
 -       sta $d400,x
@@ -69,20 +89,19 @@ shot1                               ; everything to the start of the shot
         sta nod
         sta look
         sta random_light
+        sta sink
+        sta beat
         sta SPR_ENABLE
         lda #1
         sta wait
-        ldx #TEXT_LEN - 1           ; hide the sentence: black on black, in the two screens it shows on
+        ldx #160                    ; hide the sentences: black on black, in the three screens they show on
         lda #0
--       sta ROOM + 5 * $400 + TEXT_POS,x
-        sta ROOM + 5 * $400 + TEXT_POS + 40,x
-        sta ROOM + 6 * $400 + TEXT_POS,x
-        sta ROOM + 6 * $400 + TEXT_POS + 40,x
+-       sta ROOM + 4 * $400 + BAR - 1,x
+        sta ROOM + 5 * $400 + BAR - 1,x
+        sta ROOM + 6 * $400 + BAR - 1,x
         dex
-        bpl -
-        lda #0
-        sta SPR2_COLOR              ; sprites 2 and 3: the head, black
-        sta SPR2_COLOR + 1
+        bne -
+        jsr load_text
 
         ; the hum: two low voices through the low-pass filter. 852 = 50 Hz, 1710 = just above 100 Hz
         lda #<852
@@ -121,22 +140,184 @@ loop
         sta VIC_MEMCTL
         jsr place_head
         jsr key_off
+        lda shot
+        bne +
         jsr fade
         jsr type
+        jmp .next
++       jsr play2
+.next
         inc frame
         bne +
         inc frame + 1
-+       lda frame + 1
-        cmp #>700                   ; 14 seconds
-        bne +
++       ldx shot                    ; the last frame of this shot?
         lda frame
-        cmp #<700
+        cmp shot_end_lo,x
         bne +
-        jmp shot1                   ; from the start again
-+       lda VIC_RASTER              ; the work is done within one line sometimes: do not run twice on line 251
+        lda frame + 1
+        cmp shot_end_hi,x
+        bne +
+        lda shot                    ; the other shot
+        eor #1
+        sta shot
+        jmp new_shot
++       lda VIC_RASTER              ; the work can be done within one line: do not run twice on line 251
 -       cmp VIC_RASTER
         beq -
         jmp loop
+
+shot_end_lo !byte <700, <800        ; 14 and 16 seconds
+shot_end_hi !byte >700, >800
+
+!zone load_text
+load_text                           ; subroutine: put the sentences and the time of this shot in the bitmap
+        lda shot
+        asl                         ; times 2
+        sta from + 1
+        asl                         ; times 4
+        adc from + 1                ; times 6: the pages of $600 (the carry is 0: 'shot' is small)
+        adc #>TEXTS
+        sta from + 1
+        lda #0
+        sta from
+        lda #<BAR_BITS
+        sta to
+        lda #>BAR_BITS
+        sta to + 1
+        ldx #5                      ; 5 pages = 1280 bytes
+        ldy #0
+.copy   lda (from),y
+        sta (to),y
+        iny
+        bne .copy
+        inc from + 1
+        inc to + 1
+        dex
+        bne .copy
+        ldy #23                     ; 'from' is at the clock now: 24 bytes
+-       lda (from),y
+        sta CLOCK_BITS,y
+        dey
+        bpl -
+        rts
+
+!zone show_letter
+show_letter                         ; subroutine: make the letter at place X (counted from BAR) white
+        lda #$10
+        sta ROOM + 4 * $400 + BAR,x
+        sta ROOM + 4 * $400 + BAR + 40,x
+        sta ROOM + 5 * $400 + BAR,x
+        sta ROOM + 5 * $400 + BAR + 40,x
+        sta ROOM + 6 * $400 + BAR,x
+        sta ROOM + 6 * $400 + BAR + 40,x
+        rts
+
+!zone play2
+; Shot 2 in units of 4 frames ('beat'): 0 the light comes up, 17 the last keys, 40 the RETURN key, then nothing;
+; 54 the wrong tone; 64 the tone stops and the room is darker; 78 and 120 the sentences; 200 the end
+play2                               ; subroutine: one frame of shot 2
+        lda frame + 1               ; beat = frame / 4
+        sta beat
+        lda frame
+        lsr beat
+        ror
+        lsr beat
+        ror
+        sta beat
+
+        cmp #12                     ; the light comes up
+        bcs +
+        lsr                         ; 0 to 5
+        sta light
+        tax
+        lda fade_hum2,x
+        ora #$10
+        sta SID_VOLUME
+        rts
++       cmp #54
+        bcs .wrong
+        jsr steady                  ; full light, with a flicker now and then
+        lda frame
+        and #3                      ; the keys fall on the first frame of a beat
+        bne .done
+        ldx #KEYS2 - 1
+-       lda keys2,x
+        cmp beat
+        beq .key
+        dex
+        bpl -
+        lda beat
+        cmp #40
+        bne .done
+        jsr press                   ; RETURN: a heavier key
+        lda #$18
+        sta SID_FREQ3H
+        lda #$05
+        sta SID_AD3
+        sta SID_SR3                 ; it rings on a little after the key is let go
+        lda #$81
+        sta SID_CTRL3
+.done   rts
+.key    jmp press
+.wrong
+        cmp #64
+        bcs .after
+        lda #6                      ; the light is weak while it sounds
+        sta light
+        lda #$00
+        sta SID_FREQ3L
+        lda #$07                    ; 105 Hz, almost the note of the hum, and not quite
+        sta SID_FREQ3H
+        sta SID_PW2H + 7            ; voice 3 pulse width: thin
+        lda #$00
+        sta SID_AD3
+        lda #$f0
+        sta SID_SR3
+        lda #$41
+        sta SID_CTRL3
+        rts
+.after
+        ldx #4                      ; the far corners of the room are gone
+        stx light
+        cmp #64
+        bne +
+        ldx #$00                    ; the tone stops dead
+        stx SID_SR3
+        stx SID_CTRL3
++       cmp #110                    ; his head sinks, one line in 12 frames
+        bcc +
+        cmp #119
+        bcs +
+        sbc #109                    ; (the carry is 0: one more) 0 to 8
+        tax
+        lda third,x
+        sta sink
++       lda frame                   ; a letter every beat
+        and #3
+        bne .done
+        lda beat
+        sec
+        sbc #78
+        bcc .done
+        cmp #LEN2A
+        bcs +
+        adc #TEXT2A
+        tax
+        jmp show_letter
++       lda beat
+        sec
+        sbc #122
+        bcc .done
+        cmp #LEN2B
+        bcs .done
+        adc #TEXT2B
+        tax
+        jmp show_letter
+
+KEYS2 = 9
+keys2     !byte 17, 19, 22, 23, 26, 28, 29, 32, 34
+third     !byte 1, 1, 1, 2, 2, 2, 3, 3, 3
+fade_hum2 !byte 1, 2, 3, 4, HUM, HUM
 
 !zone fade
 fade                                ; subroutine: the light and the hum come up, flicker, and go down at the end
@@ -173,13 +354,14 @@ fade                                ; subroutine: the light and the hum come up,
         sta SID_VOLUME
         rts
 .flicker
+steady                              ; subroutine: full light, with a flicker now and then
         lda random_light
-        beq +
+        beq .calm
         dec random_light
         lda #6                      ; the light is a little weaker now
         sta light
         rts
-+       lda #5
+.calm   lda #5
         sta light
         jsr random
         cmp #6                      ; about once a second
@@ -197,12 +379,12 @@ type                                ; subroutine: the next letter, with the tick
         bcs .done
         dec wait
         bne .done
+        lda typed
+        clc
+        adc #TEXT1
+        tax
+        jsr show_letter
         ldx typed
-        lda #$10                    ; white on black
-        sta ROOM + 5 * $400 + TEXT_POS,x
-        sta ROOM + 5 * $400 + TEXT_POS + 40,x
-        sta ROOM + 6 * $400 + TEXT_POS,x
-        sta ROOM + 6 * $400 + TEXT_POS + 40,x
         inc typed
         lda text_wait,x
         sta wait                    ; his rhythm
@@ -213,7 +395,9 @@ type                                ; subroutine: the next letter, with the tick
         bne ++
 +       lda #0
         sta look
-++      lda #3
+++
+press                               ; subroutine: the tick of a key, the head goes down a little
+        lda #3
         sta nod                     ; the head goes down a little
         jsr random                  ; every key sounds a little different
         and #$0f
@@ -227,10 +411,15 @@ type                                ; subroutine: the next letter, with the tick
         sta SID_CTRL3               ; noise on
 .done   rts
 
-key_off                             ; subroutine: let the key go
-        lda #$80
+key_off                             ; subroutine: let the key go (a key is never longer than a frame)
+        lda shot                    ; not while the wrong tone sounds: that would restart it every frame
+        beq +
+        lda beat
+        cmp #54
+        bcs .tone
++       lda #$80
         sta SID_CTRL3
-        rts
+.tone   rts
 
 !zone place_head
 place_head                          ; subroutine: the head, two sprites high, and the rim of light in front of it
@@ -256,6 +445,7 @@ place_head                          ; subroutine: the head, two sprites high, an
         dec nod
         lda #1
 +       clc
+        adc sink
         adc #HEAD_Y
         sta SPR0_Y
         sta SPR2_Y
@@ -281,3 +471,6 @@ text_wait                           ; frames after every letter of "He typed it 
 
         * = ROOM
         !bin "src/intro/room.bin"
+
+        * = TEXTS
+        !bin "src/intro/text.bin"
