@@ -5,7 +5,7 @@ These files come from [WebSidTracker](https://github.com/DDecoene/WebSidTracker)
 | File | What |
 |---|---|
 | `music.asm` | the WebSidTracker player, release 0.2.0 (copied from its `src/music.asm`) |
-| `instruments.asm`, `sfx.asm`, `song_raster_rumble.asm` | exported by the tracker from [`music/raster-rumble.json`](../../music/raster-rumble.json) |
+| `instruments.asm`, `sfx.asm`, `song_raster_rumble.asm` | exported by the tracker (0.2.6, same format 2 as the player) from [`music/raster-rumble.json`](../../music/raster-rumble.json) |
 
 **Licence.** Unlike the rest of raster-rumble (CC BY-NC-SA 4.0, see the root `LICENSE`), these files are under the MIT licence in [`LICENSE`](LICENSE) in this folder. The line "see ../LICENSE" at the top of `music.asm` refers to the WebSidTracker repository; here it is this folder's `LICENSE`.
 

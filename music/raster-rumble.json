@@ -1,7 +1,7 @@
 {
  "format": "websidtracker-project",
  "version": 2,
- "release": "0.2.0",
+ "release": "0.2.5",
  "instruments": [
   {
    "name": "Grind bass",
@@ -158,7 +158,7 @@
   {
    "name": "Snare",
    "wave": 64,
-   "ad": 10,
+   "ad": 8,
    "sr": 0,
    "pw": 2048,
    "pwStep": 0,
