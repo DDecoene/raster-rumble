@@ -1,6 +1,6 @@
 # The Night of the Raster Beam: the script
 
-> First draft, 2026-11-23, not approved yet. This is where the game is going. The game you can play now still follows the old story (see this file on the branch `dev`).
+> Approved as the way to go on 2026-11-23, made shot by shot and chapter by chapter. This is where the game is going. The game you can play now still follows the old story (see this file on the branch `dev`).
 >
 > Spoilers: the whole game, with its ending.
 
