@@ -50,7 +50,13 @@ The mistake was one character. The game he fixes is this one.
 
 The door closes. The figure is in the bed. The monitor still glows.
 
-**Shot 4. The alarm clock, large: 22:59.** The black bars close slowly, like eyelids. The glow is the last thing left, a thin line. The clock jumps to **23:00**, and the line of light opens into a deep, slow field of stars. A small warm light lies in the middle. It opens its eye: Pixel.
+**Shot 4. The alarm clock, large: 22:59.** The black bars close slowly, like eyelids. The glow is the last thing left, a thin line. The clock jumps to **23:00**.
+
+**Shot 5. He dreams.** The eyes open again, in the same dark room. A warm spark rises from his sleeping head, floats through the room and goes into the screen, which lights up.
+
+> Then he dreams.
+
+The picture closes to a line of light, and the line opens into a deep, slow field of stars. The same warm light lies in the middle. It opens its eye: Pixel. Pixel is him.
 
 > It is 23:00.
 > The computer is still on.

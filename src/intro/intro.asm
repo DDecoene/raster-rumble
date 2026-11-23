@@ -44,7 +44,7 @@ nod       = $07                     ; frames the head stays one line lower
 rnd       = $08                     ; random number
 look      = $09                     ; how far the head is turned to the magazine, in pixels
 random_light = $0a                  ; frames left of a flicker
-shot      = $0b                     ; 0 = shot 1, 1 = shot 2, 2 = the door, 3 = the bed (both shot 3), 4 = the clock and the eyelids, 5 = the dream (both shot 4), 6 = the title, 7 = the game starts
+shot      = $0b                     ; 0 = shot 1, 1 = shot 2, 2 = the door, 3 = the bed (both shot 3), 4 = the clock and the eyelids, 5 = the dream (both shot 4), 6 = the title, 7 = the game starts, 8 = he starts to dream (between 4 and 5)
 sink      = $0c                     ; how far the head hangs down, in lines
 beat      = $0d                     ; frame / 4 (not in shot 1)
 lid       = $11                     ; how far the eye is open: raster lines above and below MIDDLE
@@ -54,6 +54,7 @@ fire      = $14                     ; 1 = fire was down in the last frame
 beam_y    = $15                     ; the raster line of the beam
 beam_row  = $16                     ; the title: which of its rows the beam lights
 drawn     = $17                     ; 1 = the beam has drawn the title
+DREAM_WORDS = $5d00                 ; "Then he dreams.", 640 bytes of bitmap, and 23:00 for the clock
 TITLE     = $9000                   ; title.bin, packed; unpacked to $d000
 seen      = $18                     ; 1 = the story has begun once: from now on fire on the title starts the game
 in_bed    = $0e                     ; 1 = the cells of bed.bin are in the picture
@@ -95,7 +96,8 @@ start
         sta CIA1_DDRB
         lda #1
         sta fire                    ; a button that is still down does not count
-        lda #6
+        !ifndef FROM { FROM = 6 }   ; the title first; make intro FROM=4 starts at another shot, to look at it
+        lda #FROM
         sta shot
         lda #0
         sta SPR2_COLOR              ; sprites 2 and 3: the head, black
@@ -167,6 +169,10 @@ new_shot                            ; everything to the start of the shot in the
 +       cmp #6
         bne +
         jsr start_title
+        jmp hum
++       cmp #8
+        bne +
+        jsr start_spark
         jmp hum
 +       jsr empty_dream             ; the game starts
         jmp loop
@@ -300,9 +306,9 @@ loop
         beq -
         jmp loop
 
-shot_end_lo !byte <700, <800, <560, <480, <560, <1000, <1000, <220   ; frames, 50 in a second
-shot_end_hi !byte >700, >800, >560, >480, >560, >1000, >1000, >220
-shot_next   !byte 1, 2, 3, 4, 5, 6, 0, 6
+shot_end_lo !byte <700, <800, <560, <480, <560, <1000, <1000, <220, <432   ; frames, 50 in a second
+shot_end_hi !byte >700, >800, >560, >480, >560, >1000, >1000, >220, >432
+shot_next   !byte 1, 2, 3, 4, 8, 6, 0, 6, 5
 
 !zone load_text
 load_text                           ; subroutine: put the sentences and the time of this shot in the bitmap
@@ -577,6 +583,9 @@ play_late                           ; subroutine: one frame of the clock, the ey
 ++      cmp #6
         bne +
         jmp play_title
++       cmp #8
+        bne +
+        jmp play_spark
 +       jmp play_go
 
 show_dream                          ; subroutine: the VIC sees the dream, as characters
@@ -632,6 +641,11 @@ big_clock                           ; subroutine: five large sprites show the ti
         sta SPR0_X,x
         dex
         bpl -
+        lda #$1f
+        sta $d017                   ; twice as wide and twice as high
+        sta $d01d
+        lda #0
+        sta SPR_XHI
         lda #$1f
         sta $d017                   ; twice as wide and twice as high
         sta $d01d
@@ -1036,6 +1050,169 @@ play4                               ; subroutine: one frame of the clock and the
 .draw   lda #$3b
         jmp lids
 
+!zone spark
+start_spark                         ; subroutine: the sentence and 23:00 in the bitmap of the room (he is in bed there)
+        ldx #0
+-       lda DREAM_WORDS,x
+        sta BAR_BITS + 320,x
+        lda DREAM_WORDS + $100,x
+        sta BAR_BITS + 320 + $100,x
+        lda DREAM_WORDS + $180,x    ; (640 bytes: the last piece overlaps)
+        sta BAR_BITS + 320 + $180,x
+        inx
+        bne -
+        ldx #23
+-       lda DREAM_WORDS + 640,x
+        sta CLOCK_BITS,x
+        dex
+        bpl -
+        lda #1
+        sta lid
+        rts
+
+; In beats: 0 the large clock says 23:00; 26 the eyes open, in the dream; 46 a spark in his head; 54 it flies (136 frames)
+; to the screen; 60 the sentence; 88 it is in the screen; 96 the picture closes; 108 the end
+play_spark                          ; subroutine: one frame of the start of the dream
+        lda beat
+        cmp #26
+        bcs .room
+        lda #$1f
+        sta SID_VOLUME
+        lda frame
+        cmp #8
+        bne +
+        lda #$03                    ; one low stroke
+        sta SID_FREQ3H
+        lda #$0a
+        sta SID_AD3
+        lda #$11
+        sta SID_CTRL3
++       jsr show_dream
+        lda #$5b
+        sta VIC_CTRL1
+        ldx #5
+        lda frame
+        cmp #8
+        bcs +
+        ldx #0                      ; still 22:59 for a moment
++       jmp big_clock
+
+.room   lda CIA2_PORTA
+        and #$fc
+        ora #$02
+        sta CIA2_PORTA
+        lda #$08
+        sta VIC_CTRL2
+        ldx #$48                    ; the room with less light
+        lda beat
+        cmp #88                     ; the screen lights up when the spark goes in
+        bcc +
+        cmp #94
+        bcs +
+        ldx #$58
++       stx VIC_MEMCTL
+        lda #$10 + HUM - 3
+        sta SID_VOLUME
+        lda beat                    ; the eyelids
+        cmp #96
+        bcs .close
+        lda lid
+        cmp #81
+        bcs .spark
+        inc lid
+        bne .spark
+.close  lda lid
+        cmp #3
+        bcc .spark
+        dec lid
+        dec lid
+
+.spark  lda #0
+        sta $d017
+        sta $d01d
+        sta SPR_XHI
+        ldy #0                      ; no spark yet
+        lda beat
+        cmp #46
+        bcc .off
+        cmp #88
+        bcs .off
+        lda frame                   ; it glitters: orange and yellow
+        and #4
+        beq +
+        lda #1
++       ora #0
+        tax
+        lda spark_color,x
+        sta SPR2_COLOR + 2
+        ldx #0                      ; how far it is: 0 to 136
+        lda frame
+        sec
+        sbc #216
+        sta to
+        lda frame + 1
+        sbc #0
+        bcc +                       ; not yet
+        ldx to
++       cpx #136
+        bcc +
+        ldx #136
++       lda spark_y,x
+        sta SPR2_Y + 4
+        stx to
+        lda #<316                   ; x = 316 - how far
+        sec
+        sbc to
+        sta SPR2_X + 4
+        lda #>316
+        sbc #0
+        beq +
+        lda #$10                    ; the ninth bit of sprite 4
++       sta SPR_XHI
+        lda #$f0                    ; it sings softly: higher as it rises
+        sec
+        sbc SPR2_Y + 4
+        lsr
+        lsr
+        adc #20
+        sta SID_FREQ3H
+        lda #$40
+        sta SID_SR3
+        lda #$88
+        sta SID_AD3
+        lda #$11
+        sta SID_CTRL3
+        ldy #$10
+        bne +
+.off    lda #$10
+        sta SID_CTRL3
++       sty SPR_ENABLE
+
+        lda frame                   ; the sentence, a letter in a beat
+        and #3
+        bne +
+        lda beat
+        sec
+        sbc #60
+        bcc +
+        cmp #15
+        bcs +
+        adc #40 + 12
+        tax
+        jsr show_letter
++       lda #$3b
+        ldx beat                    ; the bar with the sentence is outside the eyelids: only when they move
+        cpx #47
+        bcc +
+        cpx #96
+        bcs +
+        sta VIC_CTRL1
+        rts
++       jmp lids
+
+spark_color !byte 8, 7
+spark_y !for i, 0, 136 { !byte 160 - 34 * i / 136 - 150 * i * (136 - i) / (136 * 136) }
+
 !zone dream
 start_dream                         ; everything to the start of the dream
         jsr empty_dream
@@ -1087,49 +1264,22 @@ empty_dream                         ; subroutine: the screen of the dream empty
         lda #1
         sta lid
         sta slit
+        lda #120                    ; it begins at beat 30
+        sta frame
+        lda #30
+        sta beat
         jmp loop
 
 chord_lo !byte <1669, <2500, <4205
 chord_hi !byte >1669, >2500, >4205
 !zone play5
-; In beats: 0 a line of light; 6 the clock says 23:00; 30 the line opens; 70 the eyelids are gone; 74 Pixel glows;
+; In beats: 30 (the first) a line of light that opens; 70 the eyelids are gone; 74 Pixel glows;
 ; 90 the eye opens; 104 and 120 the first sentences; 172 they go; 180 the last one; 250 the end
 play5                               ; subroutine: one frame of the dream
         jsr show_dream
-        ldx #0
+        jsr pixel
         lda beat
-        cmp #6
-        bcc .sprites
         cmp #30
-        bcs .pixel
-        cmp #6
-        bne +
-        lda frame
-        and #3
-        bne +
-        lda #$03                    ; one low stroke
-        sta SID_FREQ3H
-        lda #$09
-        sta SID_AD3
-        lda #$00
-        sta SID_SR3
-        lda #$1f
-        sta SID_VOLUME
-        lda #$11
-        sta SID_CTRL3
-+       ldx #5
-        jsr big_clock
-        jmp .open
-.sprites
-        stx SPR_ENABLE
-        jmp .open
-.pixel  jsr pixel
-.open   lda beat
-        cmp #30
-        bcs .opening
-        lda #$1b
-        jmp lids                    ; only the line of light
-.opening
         bne +
         lda frame
         and #3

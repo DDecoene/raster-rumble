@@ -90,8 +90,10 @@ build/intro.prg: $(wildcard src/intro/*.asm) $(wildcard src/intro/*.bin) src/har
 	@mkdir -p build
 	acme -f cbm --cpu 6510 -l build/intro.lbl -o $@ src/intro/intro.asm
 
+# FROM=4 starts at that shot (the numbers are in intro.asm, at 'shot')
 intro: build/intro.prg
-	x64sc -addconfig tools/vice-joystick.rc -sidenginemodel 256 -autostartprgmode 1 -autostart build/intro.prg
+	$(if $(FROM),acme -f cbm --cpu 6510 -DFROM=$(FROM) -o build/intro-from.prg src/intro/intro.asm)
+	x64sc -addconfig tools/vice-joystick.rc -sidenginemodel 256 -autostartprgmode 1 -autostart build/intro$(if $(FROM),-from).prg
 
 # draw the picture of the intro again (only after a change in tools/intro-*.py; intro-title.py runs the other two)
 intro-art:

@@ -189,6 +189,9 @@ FONT = {
     'w': '...... ...... ...... x....x x....x x....x x.xx.x x.xx.x xx..xx x....x',
     'k': 'x..... x..... x..... x...x. x..x.. x.x... xxx... x..x.. x...x. x....x',
     'h': 'x..... x..... x..... xxxxx. x....x x....x x....x x....x x....x x....x',
+    'T': 'xxxxxx ..xx.. ..xx.. ..xx.. ..xx.. ..xx.. ..xx.. ..xx.. ..xx.. ..xx..',
+    'a': '...... ...... ...... .xxxx. .....x .xxxxx x....x x....x x....x .xxxxx',
+    'm': '...... ...... ...... xxxxx. x.xx.x x.xx.x x.xx.x x.xx.x x.xx.x x.xx.x',
     'B': 'xxxxx. x....x x....x x....x xxxxx. x....x x....x x....x x....x xxxxx.',
     'N': 'x....x xx...x xx...x x.x..x x.x..x x..x.x x..x.x x...xx x...xx x....x',
     '"': '.x..x. .x..x. .x..x. ...... ...... ...... ...... ...... ...... ......',
@@ -216,20 +219,25 @@ def cells(bits):
 def texts():
     data = bytearray()
     for clock, lines in SHOTS:
-        bar = np.zeros((32, W), bool)
-        for row, text in lines:
-            col = (40 - len(text)) // 2
-            for i, ch in enumerate(text):
-                for y, line in enumerate(FONT[ch].split() if ch != ' ' else ()):
-                    for x, p in enumerate(line):
-                        bar[(row - 21) * 8 + 2 + y, (col + i) * 8 + 1 + x] = p == 'x'
-        data += (cells(bar) + cells(clock_face(clock))).ljust(0x600, b'\0')
+        data += (cells(bar_bits(lines)) + cells(clock_face(clock))).ljust(0x600, b'\0')
     return bytes(data)
+
+
+def bar_bits(lines):
+    """the bar below the picture with its sentences"""
+    bar = np.zeros((32, W), bool)
+    for row, text in lines:
+        col = (40 - len(text)) // 2
+        for i, ch in enumerate(text):
+            for y, line in enumerate(FONT[ch].split() if ch != ' ' else ()):
+                for x, p in enumerate(line):
+                    bar[(row - 21) * 8 + 2 + y, (col + i) * 8 + 1 + x] = p == 'x'
+    return bar
 
 
 def clock_face(clock):
     digits = {'2': '110 001 010 100 111', '4': '101 101 111 001 001', '1': '010 110 010 010 111',
-              '8': '111 101 111 101 111', '9': '111 101 111 001 110', '5': '111 100 110 001 110', ':': '0 1 0 1 0'}
+              '8': '111 101 111 101 111', '9': '111 101 111 001 110', '3': '111 001 011 001 111', '0': '111 101 101 101 111', '5': '111 100 110 001 110', ':': '0 1 0 1 0'}
     face = np.zeros((8, 24), bool)
     x = 3
     for ch in clock:
@@ -283,9 +291,19 @@ def colour(pairs, r, c, level):
     return RAMP[b] << 4 | RAMP[a]
 
 
-def screen(values, first_sprite):
+def spark():
+    im = np.zeros((21, 24), bool)
+    bayer = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+    for y in range(21):
+        for x in range(24):
+            r = np.hypot(x - 11.5, y - 10)
+            im[y, x] = r < 3.6 or (1 - r / 10) * 13 > bayer[y % 4][x % 4] + .5
+    return np.packbits(im, axis=1).tobytes()
+
+
+def screen(values, first_sprite, spark_sprite=0):
     scr = bytearray(values).ljust(1024, b'\0')
-    scr[0x3f8:0x400] = bytes([first_sprite, first_sprite + 1, first_sprite + 2, first_sprite + 3] + [first_sprite + 4] * 4)
+    scr[0x3f8:0x400] = bytes([first_sprite, first_sprite + 1, first_sprite + 2, first_sprite + 3] + [spark_sprite or first_sprite + 4] * 4)
     return scr
 
 
@@ -294,8 +312,12 @@ PLACES = [(r, c) for r in range(25) for c in range(40)]
 
 def room():
     bits, pairs = fit(L)
-    screens = b''.join(screen([colour(pairs, r, c, level) for r, c in PLACES], 112) for level in range(7))
-    return screens + head_sprites() + cells(bits)
+    screens = b''.join(screen([colour(pairs, r, c, level) for r, c in PLACES], 112, 127) for level in range(7))
+    extra = bytearray(head_sprites())
+    words = cells(bar_bits([(22, 'Then he dreams.')])[8:24]) + cells(clock_face('23:00'))
+    extra[0x100:0x100 + len(words)] = words
+    extra[0x3c0:0x3c0 + 63] = spark()
+    return screens + bytes(extra) + cells(bits)
 
 
 def door():
