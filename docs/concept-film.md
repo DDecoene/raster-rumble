@@ -31,17 +31,39 @@
 - Nobody dies: `LIVES` becomes `COURAGE`, `GAME OVER` becomes `THE NIGHT STARTS OVER`.
 - **The light:** fire gives a pulse of light that drives back what is near. Near misses charge it: who dares to come close gets stronger. (Other ideas: shooting, or collecting lights.)
 
+## Decided later on 2026-11-23
+
+- **What changes in the child:** by morning he feels he knows the C64 inside out, every nook and cranny of the VIC, CIA, SID and memory, and that he can make the best games and demos.
+- **A power per chip:** every chapter teaches the fire button a power that belongs to its chip. This replaces the single light above.
+- **The ending:** 07:00 is waking up. He sits down at the computer and starts to type.
+
+## Proposed, not confirmed
+
+- The night is a journey through the machine; every chip is a dream place, never a literal C64 screen.
+- The shadow is what he does not understand yet. The Raster Beam is not beaten; he learns to steer it.
+- This game could be the first game he makes.
+- Pixel is the child in the dream.
+- The Border joins the VIC at 06:00; its diagonal enemies stay at 03:00, which becomes the SID chapter.
+
+| Time | Place | What he learns |
+|---|---|---|
+| 23:00 | the screen | moving |
+| 01:00 | CIA, the clocks | slowing time |
+| 03:00 | SID, sound | a sound wave that pushes things away |
+| 04:30 | memory | remembering: using an old power again |
+| 06:00 | VIC, the Raster Beam | steering the beam |
+| 07:00 | the room | making something himself |
+
 ## Open questions
 
-1. Is the light the right new way to play?
-2. Is 07:00 waking up?
+1. Which part do we build first?
 
 ## Order, if we do it
 
 Each part is a playable version of its own.
 
 1. **The film:** intro, title screen, font, colours and background for the three chapters that exist. This one is designed first.
-2. **The light.**
+2. **The first powers**, one at a time.
 3. **The rest of the night:** 04:30, 06:00 and 07:00.
 
 There are only 25 bytes left below the sprites at `$2000`, so part 1 starts with making room.
