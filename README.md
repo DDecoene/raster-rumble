@@ -6,6 +6,8 @@ A Commodore 64 game written in 6502 assembly. Built for fun, nostalgia and, one 
 
 **[▶ Play it now in your browser](https://ddecoene.github.io/raster-rumble/play/)** (nothing to install: arrow keys steer, Space is fire, any key starts. The first start takes a few seconds). This link always starts the newest version. The game's own page: <https://ddecoene.github.io/raster-rumble/>
 
+**Where it is going: [`the-night`](https://github.com/DDecoene/raster-rumble/tree/the-night).** The game is being turned into an interactive film: a child's nightmare inside the machine, lived as an adventure, with a power to learn from each chip. The notes (with spoilers) are in [`docs/concept-film.md`](https://github.com/DDecoene/raster-rumble/blob/the-night/docs/concept-film.md). You are welcome to check out that branch, play it and test it, but it is development code: parts are unfinished and things can break. It only becomes a release when it is a finished whole.
+
 **Music and sound effects made with [WebSidTracker](https://github.com/DDecoene/WebSidTracker)**, a SID tracker that runs in the browser, with a small 6502 player for games (by the same author, made for this game). The tune and the effects are one tracker project, [`music/raster-rumble.json`](music/raster-rumble.json): load it in the [online tracker](https://ddecoene.github.io/WebSidTracker/tracker.html) (Open) to hear it, see it and change it. How the game uses it: [Sound](#sound).
 
 ![Gameplay: the Glitch and enemies that drift sideways](docs/screenshots/gameplay.gif)
