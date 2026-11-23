@@ -5,7 +5,7 @@ D64    = build/$(NAME).d64
 # the version, read from src/version.asm (that file is the one place it lives)
 VERSION = $(shell tools/version.sh)
 
-.PHONY: all sound screenshots clean emu serve test stop version d64 dist vice site site-serve
+.PHONY: all sound screenshots release clean emu serve test stop version d64 dist vice site site-serve
 
 all: $(OUT)
 
@@ -77,3 +77,10 @@ sound:
 # the title screenshot and the social preview, made with VICE. Only needed when the picture changes
 screenshots: $(OUT)
 	tools/screenshots.sh
+
+# the whole release: make release M="what is new" (V=0.0.9 for another version, DRY=1 for only the checks)
+release: export M := $(value M)
+release: export V := $(V)
+release: export DRY := $(DRY)
+release:
+	@tools/release.sh

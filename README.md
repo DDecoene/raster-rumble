@@ -80,10 +80,10 @@ The latest build is always on the [Releases page](https://github.com/DDecoene/ra
 
 How it works:
 
-- The version lives in `src/version.asm` (`!scr "v0.0.8"`) and is shown on the title screen. `make version` prints it.
+- The version lives in `src/version.asm` (`!scr "vX.Y.Z"`) and is shown on the title screen. `make version` prints it.
 - `main` only changes through a pull request from `dev`. `.github/workflows/pr-check.yml` fails a pull request that comes from another branch, that does not raise the version above the one on `main`, or whose game or web site does not build.
 - When the pull request is merged, `.github/workflows/release.yml` builds the game, makes the disk image (with `c1541`, part of VICE), tags the commit `vX.Y.Z` and creates a release with both files and generated release notes.
-- So the steps are: on `dev`, raise the version in `src/version.asm` in a commit, open a pull request `dev` to `main`, wait for the checks, merge.
+- `make release M="what is new"` does all of it: it checks that `dev` is clean and up to date, builds, raises the version (the last number + 1, or `V=0.1.0`), commits, pushes, opens the pull request, waits for the check, merges, waits for the release, compares the released and the live `.prg` with the local build, and brings `dev` up to date. `make release M="..." DRY=1` only checks and builds. It stops at the first problem; run it again with the same `M` and `V` and it goes on where it stopped. It needs `gh` (logged in) and VICE (`c1541`).
 - The screenshots do not have to show the newest version: `make screenshots` makes the title screenshot and the social preview again when the picture changes. The social preview is uploaded by hand (Settings, General).
 - After the release, the same workflow builds the web site (`make site`, the pages are in `site/`) and publishes it with GitHub Pages: the landing page at <https://ddecoene.github.io/raster-rumble/> and the play page at `/play/`. The play page opens the public emulator [vc64web](https://vc64web.github.io) with `#openROMS=true` (it installs the free open ROMs by itself), `#port2=true` (the keyboard is the joystick in port 2) and the address of the game on the site, `raster-rumble-vX.Y.Z.prg`. The version is in that name on purpose: vc64web keeps every file it ever loaded in the browser and never asks for it again, so a fixed name would keep showing an old build to anyone who played before. GitHub Pages lets other websites read its files (CORS), release files it does not. The emulator is vc64web (open source, based on VirtualC64); we only link to it. Why and how: `docs/design-landing-page.md`.
 - The workflow also still puts the newest `.prg` on the `play` branch, for the old "Play" link (vc64web with `raw.githubusercontent.com/DDecoene/raster-rumble/play/raster-rumble.prg`) that is already out there. That link has the cache problem above; share the `/play/` link instead.
@@ -118,6 +118,7 @@ One-time GitHub setup (Settings, Branches, rule for `main`): require a pull requ
     tools/bot.js          dodging bot for test runs in the browser emulator
     tools/sound.mjs       exports the tracker project to src/sound (make sound)
     tools/screenshots.sh  makes the title screenshot and the social preview with VICE (make screenshots)
+    tools/release.sh      the whole release (make release)
     tools/version.sh      prints the version from src/version.asm (Makefile and workflows use it)
     site/                 the web site: the landing page and play/, the page that starts the newest version (make site)
     tools/site.sh         builds the site into build/site, with the version and the game filled in
