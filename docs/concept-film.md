@@ -36,6 +36,8 @@
 - **What changes in the child:** by morning he feels he knows the C64 inside out, every nook and cranny of the VIC, CIA, SID and memory, and that he can make the best games and demos.
 - **A power per chip:** every chapter teaches the fire button a power that belongs to its chip. This replaces the single light above.
 - **The ending:** 07:00 is waking up. He sits down at the computer and starts to type.
+- **The order:** the intro first, the game itself stays as it is. When the intro is good, chapter by chapter.
+- **The branch:** all of this is made on `the-night`. A release is a finished whole.
 
 ## Proposed, not confirmed
 
@@ -56,14 +58,7 @@
 
 ## Open questions
 
-1. Which part do we build first?
+1. What is in the intro?
+2. Which chapters make the first release a finished whole?
 
-## Order, if we do it
-
-Each part is a playable version of its own.
-
-1. **The film:** intro, title screen, font, colours and background for the three chapters that exist. This one is designed first.
-2. **The first powers**, one at a time.
-3. **The rest of the night:** 04:30, 06:00 and 07:00.
-
-There are only 25 bytes left below the sprites at `$2000`, so part 1 starts with making room.
+There are only 25 bytes left below the sprites at `$2000`, so the intro starts with making room.
